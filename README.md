@@ -1,7 +1,10 @@
 ### Employee Tracking System
 
 **A comprehensive system for tracking employee attendance, work assignments, and administrative tasks.**  
-This platform is designed to streamline employee management processes within an organization, providing tools for both admin and employees to handle their tasks effectively. The system allows for user login and registration, assignment of tasks, attendance management, notice publishing, and request handling. 
+This platform is designed to streamline employee management processes within an organization, providing tools for both admin and employees to handle their tasks effectively. The system allows for user login and registration, assignment of tasks, attendance management, notice publishing, and request handling.
+
+> **Work in Progress:**  
+This project is under active development. Some features may be incomplete or subject to changes. Contributions and feedback are welcome.
 
 #### Key Features:
 - **User Management:** Admin and employee roles with customized access.
@@ -19,7 +22,7 @@ This platform is designed to streamline employee management processes within an 
 #### Installation:
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/employee-tracking-system.git
+   git clone https://github.com/PatelFamily21/Employee-Tracking-System/Employee-Tracking-System.git
    ```
 2. Navigate to the project directory:
    ```bash
@@ -41,3 +44,5 @@ This platform is designed to streamline employee management processes within an 
 #### How to Contribute:
 - Fork the repository, create a branch, and make your changes.
 - Submit a pull request with a clear description of the changes.
+
+Feel free to explore and contribute to the development of the Employee Tracking System!
