@@ -41,9 +41,3 @@ This platform is designed to streamline employee management processes within an 
 #### How to Contribute:
 - Fork the repository, create a branch, and make your changes.
 - Submit a pull request with a clear description of the changes.
-
-Feel free to explore and contribute to the development of the Employee Tracking System!
-
----
-
-This description provides a clear overview of the project, its features, and how to contribute. You can modify it as per your project's progression.
