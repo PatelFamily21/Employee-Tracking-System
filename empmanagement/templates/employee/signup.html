@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Sign Up</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .signup-container {
+            display: flex;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid #e6e9eb;
+        }
+
+        .signup-form {
+            width: 100%;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: #ffffff;
+        }
+
+        .signup-form h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 24px;
+        }
+
+        .welcome-text {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #3498db;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe4ea;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .signup-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-size: 16px;
+        }
+
+        .signup-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .err_message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .success_message {
+            color: #2ecc71;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div class="signup-form">
+            <h2>Sign Up to ETS</h2>
+            <div class="welcome-text">WELCOME</div>
+            <form action="" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id">Id</label>
+                    <input type="text" name="id" required placeholder="Enter your employee ID">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" name="password" required placeholder="Enter your password">
+                </div>
+                <div class="form-group">
+                    <label for="cnfpass">Confirm Password</label>
+                    <input type="password" name="cnfpass" required placeholder="Confirm your password">
+                </div>
+                <button type="submit" class="signup-btn">Sign Up</button>
+                
+                {% for msg in messages %}
+                    {% if msg == "Registered Successfully" %}
+                        <div class="success_message">
+                            {{msg}}
+                        </div>
+                    {% else %}
+                        <div class="err_message">
+                            {{msg}}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </form>
+        </div>
+    </div>
+</body>
+</html>
