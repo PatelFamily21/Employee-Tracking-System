@@ -24,3 +24,14 @@ modeSwitch.addEventListener("click" , () =>{
         
     }
 });
+  function toggleSidebar() {
+            let sidebar = document.getElementById("sidebar");
+            let content = document.getElementById("content");
+            if (sidebar.classList.contains("close")) {
+                sidebar.classList.remove("close");
+                content.classList.remove("full");
+            } else {
+                sidebar.classList.add("close");
+                content.classList.add("full");
+            }
+        }
