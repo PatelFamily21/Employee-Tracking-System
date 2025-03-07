@@ -3,7 +3,7 @@
 
 {% block content %}
 <section class="home">
-    <div class="text" style="color: black;">
+    <div class="text">
         My Work 
     </div>
     <div class="max-w-xl mx-auto">
@@ -35,7 +35,7 @@
       -webkit-box-orient: vertical;">
       <b>Work Details : </b> {{info.work}}<br>
    </div>
-   <a style="color:blueviolet;" href = "{% url 'workdetails' wid=info.id %}">View Details</a>
+      <a style="color:blueviolet;" href = "{% url 'workdetails' wid=info.id %}">View Details</a>
       <br>
       <div style="height: 2px; width: 500; background-color: black; border-radius: 10px; margin:10px 0px;"></div>
       {% endfor %}

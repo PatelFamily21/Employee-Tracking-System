@@ -1,133 +1,85 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f4f7f6;
-    }
-
-    .assign-work-container {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
-        border: 1px solid #e6e9eb;
-        max-width: 800px;
-        margin: 30px auto;
-        padding: 40px;
-    }
-
-    .page-title {
-        text-align: center;
-        color: #2c3e50;
-        margin-bottom: 30px;
-        font-weight: 600;
-        font-size: 24px;
-    }
-
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        color: #34495e;
-        font-weight: 500;
-        font-size: 14px;
-    }
-
-    .form-group select,
-    .form-group textarea,
-    .form-group input[type="date"] {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #dfe4ea;
-        border-radius: 6px;
-        transition: all 0.3s ease;
-        font-size: 14px;
-    }
-
-    .form-group select:focus,
-    .form-group textarea:focus,
-    .form-group input[type="date"]:focus {
-        outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-    }
-
-    .submit-btn {
-        width: 100%;
-        padding: 14px;
-        background-color: #3498db;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-        font-size: 16px;
-    }
-
-    .submit-btn:hover {
-        background-color: #2980b9;
-        transform: translateY(-2px);
-    }
-
-    .form-group textarea {
-        min-height: 150px;
-        resize: vertical;
-    }
-
-    .success-message {
-        color: #2ecc71;
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 16px;
-    }
-</style>
-
-<div class="assign-work-container">
-    <h2 class="page-title">Assign Work</h2>
+<section class="home">
+    <div class="text" style="color: black;">
+        Assign Work
+            <form  method="post">
+                {% csrf_token %}
+                <div class="flex flex-col">
+                    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+                      <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
+                        <div class="overflow-hidden">
+                          <table class="min-w-full ">
+                            <thead class="bg-white border-b">
+                              <tr>
+                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                                  <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Enter Details Here.</div>
+                                </th>
+                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                                  {% if flag != "" %}
+                                    <div style="font-size: 20px; color: green;">{{flag}}</div>
+                                  {% endif %}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                             <!-- Employee ID -->
+                             <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                Select Assign work to Employee ID
+                              </td>
+                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  <div hidden>{{form.assignerId}}</div>
+                                  {{form.taskerId}}
+                                  
+                              </td>
+                            </tr>
+                               <!-- Employee First Name -->
+                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  Write Work Details
+                                </td>
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  <div style="border: 1px solid black; width: min-content; height: min-content;">{{form.work}}</div>
+                                </td>
+                              </tr>
+                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  Select Assign Date
+                                </td>
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                    {{form.assignDate}}
+                                </td>
+                              </tr>
+                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  Select Due Date
+                                </td>
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                    {{form.dueDate}}
+                                </td>
+                              </tr>
+                              
+                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                  
+                                </td>
+                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                    <input type="submit" style="height:45px; width:150px; border-radius: 20px; background-color: hsl(239, 100%, 51%); color:white;" value="Submit"> 
+                                    
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                    
+            </form>     
+            
     
-    <div class="page-header">
-        <h3>Enter Details Here</h3>
-        {% if flag != "" %}
-            <div class="success-message">{{flag}}</div>
-        {% endif %}
-    </div>
-
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="taskerId">Select Assign work to Employee ID</label>
-            <div hidden>{{form.assignerId}}</div>
-            {{form.taskerId}}
-        </div>
-
-        <div class="form-group">
-            <label for="work">Write Work Details</label>
-            {{form.work}}
-        </div>
-
-        <div class="form-group">
-            <label for="assignDate">Select Assign Date</label>
-            {{form.assignDate}}
-        </div>
-
-        <div class="form-group">
-            <label for="dueDate">Select Due Date</label>
-            {{form.dueDate}}
-        </div>
-
-        <button type="submit" class="submit-btn">Submit</button>
-    </form>
-</div>
+</section>
 {% endblock %}
