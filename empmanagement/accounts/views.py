@@ -7,6 +7,9 @@ from django.contrib.auth.models import User,auth
 from django.contrib.auth import authenticate,login,logout
 from django.contrib import messages
 # Create your views here.
+def landing_page(request):
+    return render(request, "employee/landingpage.html")
+
 def login_user(request):
     if request.method == "POST":
         id = request.POST["id"]

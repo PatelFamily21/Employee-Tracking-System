@@ -70,7 +70,7 @@ class Notice(models.Model):
 
 
 class workAssignments(models.Model):
-    Id = models.CharField(primary_key=True, max_length=20)
+    Id = models.AutoField(primary_key=True)
     assignerId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="assignerId")
     work = models.TextField()
     assignDate = models.DateTimeField()
