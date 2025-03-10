@@ -70,15 +70,12 @@ class Notice(models.Model):
 
 
 class workAssignments(models.Model):
-    Id = models.AutoField(primary_key=True)
+    Id = models.CharField(max_length=20)
     assignerId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="assignerId")
     work = models.TextField()
     assignDate = models.DateTimeField()
     dueDate = models.DateTimeField()
     taskerId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="taskerId") 
-
-    def __str__(self):
-        return f"WorkAssignment {self.Id}"
 
 class Requests(models.Model):
     Id = models.CharField(primary_key=True, max_length=20)
