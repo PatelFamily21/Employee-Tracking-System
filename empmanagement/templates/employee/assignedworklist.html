@@ -1,8 +1,9 @@
+
 {% extends 'base.html' %}
 
 {% block content %}
 <section class="home">
-    <div class="text" style="color: black;">
+    <div class="text">
         Your Assigned Works
     </div>
     <div class="max-w-xl mx-auto">
@@ -20,26 +21,25 @@
                <div class="flex items-center space-x-4">
                   <div class="flex-1 min-w-0">
                      <p class="text-sm font-medium text-gray-900 truncate dark:text-white">
-                        Assigned to: <b>{{ info.taskerId }}</b>
+                        Assigned to: <b>{{info.taskerId}}</b>
                      </p>
                   </div>
+                  
              </div>
-               Assign Date: {{ info.assignDate }}<br>
-               Due Date: {{ info.dueDate }}<br>
-               <a style="color:blueviolet;" href="{% url 'workdetails' wid=info.Id %}">View Details</a>
+               Assign Date: {{info.assignDate}}<br>
+               Due Date: {{info.dueDate}}<br>
+               <a style="color:blueviolet;" href = "{% url 'workdetails' wid=info.id %}">View Details</a>
                <br>
              </td>
              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-               <a style="color:blueviolet;" href="{% url 'updatework' wid=info.Id %}">Edit</a>
+               <a style="color:blueviolet;" href = "{% url 'updatework' wid=info.id %}">Edit</a>
              </td>
              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-               <a style="color:blueviolet;" href="{% url 'deletework' wid=info.Id %}">Delete</a>
-             </td>
-             </tr>
+               <a style="color:blueviolet;" href = "{% url 'deletework' wid=info.id %}">Delete</a>
+           </td>
+             </tr>             
          </tbody>
          {% endfor %}
-         </table>
-      </div>
-    </div>
+         </table>    
 </section>
 {% endblock %}

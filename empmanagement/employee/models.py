@@ -1,8 +1,9 @@
-# from pyexpat import model
+from pyexpat import model
 from django.db import models
 
-# from pickle import TRUE
-# from turtle import title
+from pickle import TRUE
+from turtle import title
+from django.db import models
 
 
 designations_opt = (
@@ -54,7 +55,7 @@ class Employee(models.Model):
 class Attendance(models.Model):
     eId = models.ForeignKey(Employee,on_delete=models.CASCADE)
     month = models.CharField(max_length=50,choices=months)
-    days = models.PositiveSmallIntegerField() 
+    days = models.CharField(max_length=5,choices=days)
 
     def __str__(self):
         return "%s %s" % (self.eId, self.month)
@@ -70,7 +71,7 @@ class Notice(models.Model):
 
 
 class workAssignments(models.Model):
-    Id = models.CharField(max_length=20)
+    id = models.AutoField(primary_key=True)
     assignerId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="assignerId")
     work = models.TextField()
     assignDate = models.DateTimeField()
@@ -78,11 +79,8 @@ class workAssignments(models.Model):
     taskerId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="taskerId") 
 
 class Requests(models.Model):
-    Id = models.CharField(primary_key=True, max_length=20)
+    Id = models.CharField(max_length=20)
     requesterId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="requesterId")
     requestMessage = models.TextField()
     requestDate = models.DateTimeField()
     destinationEmployeeId = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="toEmployeeId") 
-
-    def __str__(self):
-        return f"Request {self.Id}"

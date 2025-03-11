@@ -1,0 +1,60 @@
+# Django-specific
+*.log
+*.pot
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+db.sqlite3  # Default SQLite database (omit if using a different DB)
+*.sqlite3
+migrations/  # Exclude all migration files (optional, see note below)
+
+# Environment
+.env
+venv/
+ENV/
+env/
+virtualenv/
+*.env
+
+# Static and media files
+staticfiles/
+media/
+
+# IDEs and editors
+.idea/  # PyCharm
+*.sublime-workspace
+.vscode/  # Visual Studio Code
+*.swp  # Vim swap files
+
+# OS-specific
+.DS_Store  # macOS
+Thumbs.db  # Windows
+
+# Python package management
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+sdist/
+wheels/
+*.whl
+
+# Testing and coverage
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.tox/
+nosetests.xml
+pytest_cache/
+
+# Miscellaneous
+*.bak
+*.cache
+*.pid
+*.seed
+*.tmp
