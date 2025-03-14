@@ -42,7 +42,7 @@ class Employee(models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="employees")
 
     def __str__(self):
-        return "%s %s" % (self.eID, self.firstName)
+        return "%s %s %s" % (self.firstName, self.lastName, self.designation)
 
 class Attendance(models.Model):
     eId = models.ForeignKey(Employee, on_delete=models.CASCADE)
@@ -50,7 +50,7 @@ class Attendance(models.Model):
     days = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return "%s %s" % (self.eId, self.month)
+        return "%s %s" % (self.eId, self.month, self.days)
 
 class Notice(models.Model):
     Id = models.CharField(primary_key=True, max_length=20)
@@ -61,7 +61,8 @@ class Notice(models.Model):
     departments = models.ManyToManyField(Department, blank=True, related_name="notices")
 
     def __str__(self):
-        return self.title
+        return self.title, self.description, self.publishDate, self.departments
+
 
 class WorkAssignments(models.Model):  # Renamed to follow PEP 8
     Id = models.CharField(primary_key=True, max_length=20)
