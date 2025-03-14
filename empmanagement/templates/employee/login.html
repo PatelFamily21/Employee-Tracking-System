@@ -136,7 +136,7 @@
                 </div>
                 <button type="submit" class="login-btn">Sign In</button>
                 <div class="new-employee">
-                    <a href="signup">New Employee? Create an Account</a>
+                    <a href="{% url 'signup' %}">New Employee? Create an Account</a>
                 </div>
                 <div class="err_message">
                     {% for msg in messages %}

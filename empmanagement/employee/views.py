@@ -1,6 +1,6 @@
 from django.shortcuts import redirect, render, get_object_or_404
 from .forms import *
-from employee.models import Employee,Attendance,Notice,workAssignments
+from employee.models import Employee,Attendance,Notice,WorkAssignments, Department
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
@@ -48,12 +48,12 @@ def assignWork(request):
 
 @login_required(login_url='/')
 def mywork(request):
-    work = workAssignments.objects.filter(taskerId=request.user.username)
+    work = WorkAssignments.objects.filter(taskerId=request.user.username)
     return render(request,"employee/mywork.html",{"work":work})
 
 @login_required(login_url='/')
 def workdetails(request,wid):
-    workdetails = workAssignments.objects.get(id=wid);
+    workdetails = WorkAssignments.objects.get(id=wid);
     return render(request,"employee/workdetails.html",{"workdetails":workdetails})
 
 @login_required(login_url='/')
@@ -91,18 +91,18 @@ def requestdetails(request,rid):
 
 @login_required(login_url='/')
 def assignedworklist(request):
-    works = workAssignments.objects.filter(assignerId=request.user.username).all()
+    works = WorkAssignments.objects.filter(assignerId=request.user.username).all()
     return render(request,"employee/assignedworklist.html",{"works":works})
 
 @login_required(login_url='/')
 def deletework(request, wid):
-    obj = get_object_or_404(workAssignments, id=wid)
+    obj = get_object_or_404(WorkAssignments, id=wid)
     obj.delete()
     return render(request,"employee/assignedworklist.html")
 
 @login_required(login_url='/')
 def updatework(request,wid):
-    work = workAssignments.objects.get(id=wid)
+    work = WorkAssignments.objects.get(id=wid)
     form = workform(request.POST or None, instance=work)
     flag = ""
     if form.is_valid():

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from employee.models import Employee,Attendance,Notice, Requests
+from employee.models import Employee,Attendance,Notice, Requests, Department
 
 # Customize Admin Titles
 admin.site.site_header = "Employee Tracking System Admin"
@@ -12,3 +12,4 @@ admin.site.register(Employee)
 admin.site.register(Attendance)
 admin.site.register(Notice)
 admin.site.register(Requests)
+admin.site.register(Department)

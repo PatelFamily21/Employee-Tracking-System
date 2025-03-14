@@ -1,10 +1,10 @@
 from tkinter import Widget
 from django import forms
-from .models import workAssignments, Requests
+from .models import WorkAssignments, Requests
 
 class workform(forms.ModelForm):
     class Meta:
-        model=workAssignments
+        model=WorkAssignments
         widgets={
             "assignDate" : forms.DateInput(attrs={'type':'datetime-local'}),
             "dueDate" : forms.DateInput(attrs={'type':'datetime-local'}),
