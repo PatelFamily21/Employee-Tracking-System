@@ -71,6 +71,7 @@ TEMPLATES = [
                 'employee.context_processors.employee_context',
                 'employee.context_processors.notifications',
                 'employee.context_processors.sidebar_context',
+                'employee.context_processors.sidebar_counts',
             ],
         },
     },

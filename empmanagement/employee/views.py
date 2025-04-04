@@ -315,37 +315,51 @@ def attendance(request):
     return render(request, "employee/attendance.html", context)
 
 
+
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.db.models import Q
+from django.shortcuts import redirect
+from django.contrib import messages
+
 @role_required('employee', 'manager', 'hr', 'admin')
 def notice(request):
-    employee = Employee.objects.get(eID=request.user.username)
-    
-    # Filter notices based on active status and expiration
-    today = timezone.now().date()
-    notices = Notice.objects.filter(
-        is_active=True,  # Only active notices
-        Q(expires_on__isnull=True) | Q(expires_on__gte=today)  # Not expired
-    ).prefetch_related('departments').order_by('-is_urgent', '-publishDate')  # Urgent notices first, then by date
+    # Fetch the employee with error handling
+    try:
+        employee = Employee.objects.get(eID=request.user.username)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee profile not found. Please contact HR.")
+        return redirect('dashboard')
 
-    # Filter notices by department in Python to avoid duplicates
+    today = timezone.now().date()
+    # Use Q objects for all conditions to avoid keyword arguments in filter()
+    notices = Notice.objects.filter(
+        Q(is_active=True) & (Q(expires_on__isnull=True) | Q(expires_on__gte=today))
+    ).prefetch_related('departments').order_by('-is_urgent', '-publishDate')
+
+    # Filter notices by department in Python
     filtered_notices = []
-    seen_ids = set()  # To track unique notice IDs
     for notice in notices:
-        if notice.Id in seen_ids:
-            continue  # Skip duplicates
-        # Check if the notice is company-wide (no departments) or matches the employee's department
         notice_depts = notice.departments.all()
-        if not notice_depts or employee.department in notice_depts:
+        # Handle case where employee.department is None
+        if not notice_depts or (employee.department and employee.department in notice_depts):
             filtered_notices.append(notice)
-            seen_ids.add(notice.Id)
 
     # Paginate the filtered notices
-    paginator = Paginator(filtered_notices, 10)  # 10 notices per page
+    paginator = Paginator(filtered_notices, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Mark notices as viewed (only for notices the employee hasn't seen)
+    # Optimize NoticeView creation to avoid N+1 queries
+    notice_ids = [notice.Id for notice in page_obj]
+    viewed_notice_ids = set(
+        NoticeView.objects.filter(
+            employee=employee,
+            notice__Id__in=notice_ids
+        ).values_list('notice__Id', flat=True)
+    )
     for notice in page_obj:
-        if not NoticeView.objects.filter(notice=notice, employee=employee).exists():
+        if notice.Id not in viewed_notice_ids:
             NoticeView.objects.create(notice=notice, employee=employee)
 
     context = {
@@ -382,6 +396,44 @@ def noticedetail(request, id):
         'noticedetail': notice,  # Keep the context variable name consistent with your template
     }
     return render(request, "employee/noticedetail.html", context)
+
+# employee/views.py
+@role_required('hr', 'admin')
+def edit_notice(request, id):
+    notice = get_object_or_404(Notice, Id=id)
+    if request.method == 'POST':
+        form = NoticeForm(request.POST, instance=notice)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Notice updated successfully!")
+            return redirect('notice')
+    else:
+        form = NoticeForm(instance=notice)
+    
+    context = {
+        'form': form,
+        'action': 'Edit',
+    }
+    return render(request, 'employee/notice_form.html', context)
+
+# employee/views.py
+# employee/views.py
+from .models import AuditLog
+
+@role_required('hr', 'admin')
+def delete_notice(request, id):
+    notice = get_object_or_404(Notice, Id=id)
+    notice_title = notice.title  # Store the title for the audit log
+    notice.delete()
+    # Log the deletion
+    AuditLog.objects.create(
+        employee=request.user.employee,
+        action=f"Deleted notice: {notice_title}",
+        timestamp=timezone.now()
+    )
+    messages.success(request, "Notice deleted successfully!")
+    return redirect('manage_notices')
+
 
 # employee/views.py
 from django.shortcuts import redirect
@@ -1372,3 +1424,21 @@ def leave_request_details(request, rid):
         "can_process": leave_request.destination_employee == employee and leave_request.status == 'pending',
     })
 
+# employee/views.py
+# employee/views.py
+@role_required('hr', 'admin')
+def manage_notices(request):
+    notices = Notice.objects.all()
+    # Add filtering by urgency
+    is_urgent = request.GET.get('is_urgent')
+    if is_urgent in ['true', 'false']:
+        notices = notices.filter(is_urgent=(is_urgent == 'true'))
+
+    # Add sorting
+    sort_by = request.GET.get('sort_by', '-publishDate')
+    notices = notices.order_by(sort_by)
+
+    context = {
+        'notices': notices,
+    }
+    return render(request, 'employee/manage_notices.html', context)

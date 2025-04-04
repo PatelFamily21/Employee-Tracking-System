@@ -1,0 +1,35 @@
+<!-- employee/manage_notices.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
+    <h1 class="text-2xl font-bold mb-6">Manage Notices</h1>
+    <div class="flex justify-between mb-4">
+        <a href="{% url 'create_notice' %}" class="inline-block bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Create New Notice</a>
+        <div class="flex space-x-2">
+            <a href="?is_urgent=true" class="text-blue-600 hover:underline">Show Urgent Only</a>
+            <a href="?is_urgent=false" class="text-blue-600 hover:underline">Show Non-Urgent Only</a>
+            <a href="?" class="text-blue-600 hover:underline">Show All</a>
+        </div>
+    </div>
+    <div class="space-y-4">
+        {% for notice in notices %}
+            <div class="border-b pb-3 flex justify-between items-center">
+                <div>
+                    <p class="font-medium">{{ notice.title }}</p>
+                    <span class="text-sm text-gray-500">{{ notice.publishDate|date:"Y-m-d" }}</span>
+                    {% if notice.is_urgent %}
+                        <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">Urgent</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <a href="{% url 'edit_notice' notice.Id %}" class="text-blue-600 hover:underline">Edit</a>
+                    <a href="{% url 'delete_notice' notice.Id %}" class="ml-4 text-red-600 hover:underline" onclick="return confirm('Are you sure you want to delete this notice?')">Delete</a>
+                </div>
+            </div>
+        {% empty %}
+            <p>No notices found.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

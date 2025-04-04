@@ -147,132 +147,149 @@
                 </div>
             </div>
 
-           <!-- Navigation Menu -->
-<nav class="flex-grow px-4 py-6 space-y-1 overflow-y-auto">
-    <!-- General Items (All Roles) -->
-    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/dashboard' %}active{% endif %}">
-        <i class="fas fa-home mr-3 text-gray-500"></i>
-        <a href="{% url 'dashboard' %}" class="text-sm truncate sidebar-text">Dashboard</a>
-        <span class="sidebar-tooltip">Dashboard</span>
-    </div>
-    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/profile' %}active{% endif %}">
-        <i class="fas fa-user mr-3 text-gray-500"></i>
-        <a href="{% url 'profile' %}" class="text-sm truncate sidebar-text">Your Profile</a>
-        <span class="sidebar-tooltip">Your Profile</span>
-    </div>
-    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notifications' %}active{% endif %}">
-        <i class="fas fa-envelope mr-3 text-gray-500"></i>
-        <a href="{% url 'notifications' %}" class="text-sm truncate sidebar-text">Notifications</a>
-        {% if unread_notifications_count > 0 %}
-            <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ unread_notifications_count }}</span>
-        {% endif %}
-        <span class="sidebar-tooltip">Notifications</span>
-    </div>
+            <!-- Navigation Menu -->
+            <nav class="flex-grow px-4 py-6 space-y-1 overflow-y-auto">
+                <!-- General Items (All Roles) -->
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/dashboard' %}active{% endif %}">
+                    <i class="fas fa-home mr-3 text-gray-500"></i>
+                    <a href="{% url 'dashboard' %}" class="text-sm truncate sidebar-text">Dashboard</a>
+                    <span class="sidebar-tooltip">Dashboard</span>
+                </div>
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/profile' %}active{% endif %}">
+                    <i class="fas fa-user mr-3 text-gray-500"></i>
+                    <a href="{% url 'profile' %}" class="text-sm truncate sidebar-text">Your Profile</a>
+                    <span class="sidebar-tooltip">Your Profile</span>
+                </div>
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notifications' %}active{% endif %}">
+                    <i class="fas fa-envelope mr-3 text-gray-500"></i>
+                    <a href="{% url 'notifications' %}" class="text-sm truncate sidebar-text">Notifications</a>
+                    {% if unread_notifications_count > 0 %}
+                        <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                    <span class="sidebar-tooltip">Notifications</span>
+                </div>
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notice' %}active{% endif %}">
+                    <i class="fas fa-bell mr-3 text-gray-500"></i>
+                    <a href="{% url 'notice' %}" class="text-sm truncate sidebar-text">Notices</a>
+                    {% if unread_notices_count > 0 %}
+                        <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ unread_notices_count }}</span>
+                    {% endif %}
+                    <span class="sidebar-tooltip">Notices</span>
+                </div>
+                
 
-    <!-- Manager/Admin Items -->
-    {% if employee.role == 'manager' or employee.role == 'admin' %}
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/assignwork' %}active{% endif %}">
-            <i class="fas fa-briefcase mr-3 text-gray-500"></i>
-            <a href="{% url 'assignwork' %}" class="text-sm truncate sidebar-text">Assign Work</a>
-            <span class="sidebar-tooltip">Assign Work</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/editAW' %}active{% endif %}">
-            <i class="fas fa-edit mr-3 text-gray-500"></i>
-            <a href="{% url 'assignedworklist' %}" class="text-sm truncate sidebar-text">Edit Assigned Works</a>
-            <span class="sidebar-tooltip">Edit Assigned Works</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/productivity' %}active{% endif %}">
-            <i class="fas fa-chart-line mr-3 text-gray-500"></i>
-            <a href="{% url 'productivity_dashboard' %}" class="text-sm truncate sidebar-text">Productivity Dashboard</a>
-            <span class="sidebar-tooltip">Productivity Dashboard</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/managerial-requests' %}active{% endif %}">
-            <i class="fas fa-check-circle mr-3 text-gray-500"></i>
-            <a href="{% url 'managerial_requests' %}" class="text-sm truncate sidebar-text">Managerial Requests</a>
-            {% if pending_approvals_count > 0 %}
-                <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_approvals_count }}</span>
-            {% endif %}
-            <span class="sidebar-tooltip">Managerial Requests</span>
-        </div>
-    {% endif %}
+                <!-- Manager/Admin Items -->
+                {% if employee.role == 'manager' or employee.role == 'admin' %}
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/assignwork' %}active{% endif %}">
+                        <i class="fas fa-briefcase mr-3 text-gray-500"></i>
+                        <a href="{% url 'assignwork' %}" class="text-sm truncate sidebar-text">Assign Work</a>
+                        <span class="sidebar-tooltip">Assign Work</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/editAW' %}active{% endif %}">
+                        <i class="fas fa-edit mr-3 text-gray-500"></i>
+                        <a href="{% url 'assignedworklist' %}" class="text-sm truncate sidebar-text">Edit Assigned Works</a>
+                        <span class="sidebar-tooltip">Edit Assigned Works</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/productivity' %}active{% endif %}">
+                        <i class="fas fa-chart-line mr-3 text-gray-500"></i>
+                        <a href="{% url 'productivity_dashboard' %}" class="text-sm truncate sidebar-text">Productivity Dashboard</a>
+                        <span class="sidebar-tooltip">Productivity Dashboard</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/managerial-requests' %}active{% endif %}">
+                        <i class="fas fa-check-circle mr-3 text-gray-500"></i>
+                        <a href="{% url 'managerial_requests' %}" class="text-sm truncate sidebar-text">Managerial Requests</a>
+                        {% if pending_approvals_count > 0 %}
+                            <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_approvals_count }}</span>
+                        {% endif %}
+                        <span class="sidebar-tooltip">Managerial Requests</span>
+                    </div>
+                {% endif %}
 
-    <!-- HR/Admin Items -->
-    {% if employee.role == 'hr' or employee.role == 'admin' %}
-        <div class="mt-4 mb-2 px-3">
-            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/hr-dashboard' %}active{% endif %}">
-            <i class="fas fa-briefcase mr-3 text-gray-500"></i>
-            <a href="{% url 'hr_dashboard' %}" class="text-sm truncate sidebar-text">HR Dashboard</a>
-            <span class="sidebar-tooltip">HR Dashboard</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-roles' %}active{% endif %}">
-            <i class="fas fa-users mr-3 text-gray-500"></i>
-            <a href="{% url 'manage_roles' %}" class="text-sm truncate sidebar-text">Manage Roles</a>
-            <span class="sidebar-tooltip">Manage Roles</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/review-role-changes' %}active{% endif %}">
-            <i class="fas fa-user-check mr-3 text-gray-500"></i>
-            <a href="{% url 'review_role_changes' %}" class="text-sm truncate sidebar-text">Review Role Changes</a>
-            {% if pending_role_changes_count > 0 %}
-                <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_role_changes_count }}</span>
-            {% endif %}
-            <span class="sidebar-tooltip">Review Role Changes</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/role-change-history' %}active{% endif %}">
-            <i class="fas fa-history mr-3 text-gray-500"></i>
-            <a href="{% url 'role_change_history' %}" class="text-sm truncate sidebar-text">Role Change History</a>
-            <span class="sidebar-tooltip">Role Change History</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-requests' %}active{% endif %}">
-            <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
-            <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Requests</a>
-            <span class="sidebar-tooltip">Employee Requests</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-management' %}active{% endif %}">
-            <i class="fas fa-user-friends mr-3 text-gray-500"></i>
-            <a href="{% url 'employee_management' %}" class="text-sm truncate sidebar-text">Employee Management</a>
-            <span class="sidebar-tooltip">Employee Management</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/system-settings' %}active{% endif %}">
-            <i class="fas fa-cog mr-3 text-gray-500"></i>
-            <a href="{% url 'system_settings' %}" class="text-sm truncate sidebar-text">System Settings</a>
-            <span class="sidebar-tooltip">System Settings</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/audit-logs' %}active{% endif %}">
-            <i class="fas fa-file-alt mr-3 text-gray-500"></i>
-            <a href="{% url 'audit_logs' %}" class="text-sm truncate sidebar-text">Audit Logs</a>
-            <span class="sidebar-tooltip">Audit Logs</span>
-        </div>
-    {% endif %}
+                <!-- HR/Admin Items -->
+                {% if employee.role == 'hr' or employee.role == 'admin' %}
+                    <div class="mt-4 mb-2 px-3">
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/hr-dashboard' %}active{% endif %}">
+                        <i class="fas fa-briefcase mr-3 text-gray-500"></i>
+                        <a href="{% url 'hr_dashboard' %}" class="text-sm truncate sidebar-text">HR Dashboard</a>
+                        <span class="sidebar-tooltip">HR Dashboard</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/create-notice' %}active{% endif %}">
+                        <i class="fas fa-bullhorn mr-3 text-gray-500"></i>
+                        <a href="{% url 'create_notice' %}" class="text-sm truncate sidebar-text">Create Notice</a>
+                        <span class="sidebar-tooltip">Create Notice</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-notices' %}active{% endif %}">
+                        <i class="fas fa-bell mr-3 text-gray-500"></i>
+                        <a href="{% url 'manage_notices' %}" class="text-sm truncate sidebar-text">Manage Notices</a>
+                        {% if total_notices_count > 0 %}
+                            <span class="ml-2 bg-blue-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ total_notices_count }}</span>
+                        {% endif %}
+                        <span class="sidebar-tooltip">Manage Notices</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-roles' %}active{% endif %}">
+                        <i class="fas fa-users mr-3 text-gray-500"></i>
+                        <a href="{% url 'manage_roles' %}" class="text-sm truncate sidebar-text">Manage Roles</a>
+                        <span class="sidebar-tooltip">Manage Roles</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/review-role-changes' %}active{% endif %}">
+                        <i class="fas fa-user-check mr-3 text-gray-500"></i>
+                        <a href="{% url 'review_role_changes' %}" class="text-sm truncate sidebar-text">Review Role Changes</a>
+                        {% if pending_role_changes_count > 0 %}
+                            <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_role_changes_count }}</span>
+                        {% endif %}
+                        <span class="sidebar-tooltip">Review Role Changes</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/role-change-history' %}active{% endif %}">
+                        <i class="fas fa-history mr-3 text-gray-500"></i>
+                        <a href="{% url 'role_change_history' %}" class="text-sm truncate sidebar-text">Role Change History</a>
+                        <span class="sidebar-tooltip">Role Change History</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-requests' %}active{% endif %}">
+                        <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
+                        <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Requests</a>
+                        <span class="sidebar-tooltip">Employee Requests</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-management' %}active{% endif %}">
+                        <i class="fas fa-user-friends mr-3 text-gray-500"></i>
+                        <a href="{% url 'employee_management' %}" class="text-sm truncate sidebar-text">Employee Management</a>
+                        <span class="sidebar-tooltip">Employee Management</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/system-settings' %}active{% endif %}">
+                        <i class="fas fa-cog mr-3 text-gray-500"></i>
+                        <a href="{% url 'system_settings' %}" class="text-sm truncate sidebar-text">System Settings</a>
+                        <span class="sidebar-tooltip">System Settings</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/audit-logs' %}active{% endif %}">
+                        <i class="fas fa-file-alt mr-3 text-gray-500"></i>
+                        <a href="{% url 'audit_logs' %}" class="text-sm truncate sidebar-text">Audit Logs</a>
+                        <span class="sidebar-tooltip">Audit Logs</span>
+                    </div>
+                {% endif %}
 
-    <!-- Employee Tools (Non-Admin/HR Roles) -->
-    {% if employee.role == 'employee' or employee.role == 'manager' %}
-        <div class="mt-4 mb-2 px-3">
-            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee Tools</div>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/mywork' %}active{% endif %}">
-            <i class="fas fa-tasks mr-3 text-gray-500"></i>
-            <a href="{% url 'mywork' %}" class="text-sm truncate sidebar-text">My Work</a>
-            <span class="sidebar-tooltip">My Work</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notice' %}active{% endif %}">
-            <i class="fas fa-bell mr-3 text-gray-500"></i>
-            <a href="{% url 'notice' %}" class="text-sm truncate sidebar-text">Notices</a>
-            <span class="sidebar-tooltip">Notices</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/makeRequest' %}active{% endif %}">
-            <i class="fas fa-message mr-3 text-gray-500"></i>
-            <a href="{% url 'makeRequest' %}" class="text-sm truncate sidebar-text">Requests</a>
-            <span class="sidebar-tooltip">Requests</span>
-        </div>
-        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/attendance' %}active{% endif %}">
-            <i class="fas fa-calendar mr-3 text-gray-500"></i>
-            <a href="{% url 'attendance' %}" class="text-sm truncate sidebar-text">Attendance</a>
-            <span class="sidebar-tooltip">Attendance</span>
-        </div>
-    {% endif %}
-</nav>
+                <!-- Employee Tools (Non-Admin/HR Roles) -->
+                {% if employee.role == 'employee' or employee.role == 'manager' %}
+                    <div class="mt-4 mb-2 px-3">
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee Tools</div>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/mywork' %}active{% endif %}">
+                        <i class="fas fa-tasks mr-3 text-gray-500"></i>
+                        <a href="{% url 'mywork' %}" class="text-sm truncate sidebar-text">My Work</a>
+                        <span class="sidebar-tooltip">My Work</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/makeRequest' %}active{% endif %}">
+                        <i class="fas fa-message mr-3 text-gray-500"></i>
+                        <a href="{% url 'makeRequest' %}" class="text-sm truncate sidebar-text">Requests</a>
+                        <span class="sidebar-tooltip">Requests</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/attendance' %}active{% endif %}">
+                        <i class="fas fa-calendar mr-3 text-gray-500"></i>
+                        <a href="{% url 'attendance' %}" class="text-sm truncate sidebar-text">Attendance</a>
+                        <span class="sidebar-tooltip">Attendance</span>
+                    </div>
+                {% endif %}
+            </nav>
 
             <!-- User info and Logout -->
             <div class="p-4 border-t mt-auto">

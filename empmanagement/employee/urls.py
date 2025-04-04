@@ -37,4 +37,7 @@ urlpatterns = [
     re_path(r'noticedetail/(?P<id>\w+)/', views.noticedetail, name='noticedetail'),
     path('create-notice/', views.create_notice, name='create_notice'),
     re_path(r'edit-notice/(?P<id>\w+)/', views.edit_notice, name='edit_notice'),
+    path('delete-notice/<str:id>/', views.delete_notice, name='delete_notice'),
+    # employee/urls.py
+    path('manage-notices/', views.manage_notices, name='manage_notices'),
 ]
