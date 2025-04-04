@@ -23,11 +23,9 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from datetime import datetime, time
 import csv
-from django.http import HttpResponse
-from .decorators import role_required
-
-
-# Dashboard view (accessible to all authenticated employees)
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.db.models import Q
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Employee, Requests, Notice, Department, LeaveRequest
@@ -316,21 +314,6 @@ def attendance(request):
     }
     return render(request, "employee/attendance.html", context)
 
-# Notice view (accessible to all authenticated employees)
-# employee/views.py
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.db.models import Q
-
-# employee/views.py
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.db.models import Q
-
-# employee/views.py
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.db.models import Q
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def notice(request):
