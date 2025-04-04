@@ -1,47 +1,177 @@
+<!-- employee/attendance.html -->
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="home">
-    <div class="text" style="color: black;">
-        Your Attendance
-            <form  method="post">
-                {% csrf_token %}
-                <div class="flex flex-col">
-                    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                      <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-                        <div class="overflow-hidden">
-                          <table class="min-w-full ">
-                            <thead class="bg-white border-b">
-                              <tr>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                  <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Month</div>
-                                </th>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                    <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Days</div>
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                                {% for info in info %}
-                                <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                        {{info.month}}
-                                    </td>
-                                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                        {{info.days}}
-                                    </td>
-                                  </tr>
-                                
-                                 {% endfor %}
-                              
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Your Attendance</h1>
+
+    <!-- Check-In/Check-Out Form -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4">Mark Attendance</h2>
+        <p class="text-sm text-gray-600 mb-4">
+            Check-in allowed: 00:00 AM - 9:30 AM (latest by 8:30 AM recommended) | 
+            Check-out allowed: 4:00 PM - 5:00 PM
+        </p>
+        {% if is_on_leave_today %}
+            <div class="mb-4 p-4 rounded-lg bg-yellow-100 text-yellow-700">
+                You are on approved leave today and cannot check in or out.
+            </div>
+        {% endif %}
+        <form method="post" class="flex space-x-4">
+            {% csrf_token %}
+            <button type="submit" name="action" value="check_in" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200 {% if today_record.check_in_time or is_on_leave_today %}opacity-50 cursor-not-allowed{% endif %}" {% if today_record.check_in_time or is_on_leave_today %}disabled{% endif %}>
+                Check In for Today
+            </button>
+            <button type="submit" name="action" value="check_out" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 {% if not today_record.check_in_time or today_record.check_out_time or is_on_leave_today %}opacity-50 cursor-not-allowed{% endif %}" {% if not today_record.check_in_time or today_record.check_out_time or is_on_leave_today %}disabled{% endif %}>
+                Check Out for Today
+            </button>
+        </form>
+        {% if today_record %}
+            <div class="mt-4 text-sm text-gray-600">
+                {% if today_record.check_in_time %}
+                    <p>Checked in at: {{ today_record.check_in_time|date:"Y-m-d H:i" }}</p>
+                {% endif %}
+                {% if today_record.check_out_time %}
+                    <p>Checked out at: {{ today_record.check_out_time|date:"Y-m-d H:i" }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if messages %}
+            <div class="mt-4">
+                {% for message in messages %}
+                    <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ message }}
                     </div>
-                  </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Leave Request Form -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4">Request Leave</h2>
+        <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% csrf_token %}
+            <div>
+                <label for="leave_start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" id="leave_start_date" name="leave_start_date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="leave_end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" id="leave_end_date" name="leave_end_date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="md:col-span-2">
+                <label for="leave_reason" class="block text-sm font-medium text-gray-700">Reason</label>
+                <textarea id="leave_reason" name="leave_reason" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+            </div>
+            <div class="md:col-span-2">
+                <button type="submit" name="action" value="leave_request" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                    Submit Leave Request
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Attendance Summary -->
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Days Present (This Month)</h3>
+            <p class="text-3xl font-bold text-green-600">{{ summary.present }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Days Absent (This Month)</h3>
+            <p class="text-3xl font-bold text-red-600">{{ summary.absent }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Days on Leave (This Month)</h3>
+            <p class="text-3xl font-bold text-yellow-600">{{ summary.leave }}</p>
+        </div>
+    </div>
+
+    <!-- Attendance History -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">Attendance History</h2>
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit" name="action" value="export_csv" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                    Export to CSV
+                </button>
+            </form>
+        </div>
+        <!-- Date Filter Form -->
+        <form method="get" class="mb-6 flex flex-col sm:flex-row gap-4">
+            <div>
+                <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" id="start_date" name="start_date" value="{{ request.GET.start_date }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" id="end_date" name="end_date" value="{{ request.GET.end_date }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="self-end">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">Filter</button>
+            </div>
+        </form>
+
+        <!-- Attendance Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Status</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Check-In Time</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Check-Out Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in page_obj %}
+                        <tr class="border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ record.date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                <span class="{% if record.status == 'present' %}text-green-600{% elif record.status == 'absent' %}text-red-600{% elif record.status == 'leave' %}text-yellow-600{% else %}text-gray-600{% endif %} {% if record.is_leave %}italic{% endif %}">
+                                    {{ record.status|capfirst }}
+                                </span>
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ record.check_in_time|date:"H:i"|default:"—" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ record.check_out_time|date:"H:i"|default:"—" }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-sm text-gray-900 font-light px-6 py-4 text-center">
+                                No attendance records found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+            <div class="mt-6 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                    </p>
                 </div>
-                    
-            </form>     
-</section>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Previous</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

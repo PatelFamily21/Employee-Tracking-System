@@ -1,42 +1,133 @@
 {% extends 'base.html' %}
+{% load request_tags %}
 
 {% block content %}
-<section class="home">
-    <div class="text" style="color: black;">
-        View Requests 
+<section class="py-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">View Requests</h1>
+
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Pending Requests -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Pending Requests</h2>
+            {% if page_obj %}
+                <div class="space-y-4">
+                    {% for req in page_obj %}
+                        {% if req.status == 'pending' %}
+                            <div class="border-b pb-3 flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">
+                                        {% if req|is_leave_request %}
+                                            Leave Request
+                                        {% else %}
+                                            {% if req.request_type == 'resource' %}Resource Request
+                                            {% elif req.request_type == 'support' %}Support Request
+                                            {% elif req.request_type == 'approval' %}Approval Request
+                                            {% else %}Other Request{% endif %}
+                                        {% endif %}
+                                        - <span class="text-yellow-600">{{ req.status|title }}</span>
+                                    </p>
+                                    <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
+                                    <p class="text-sm text-gray-500">Submitted by: {{ req.requester }} on {{ req.request_date|date:"Y-m-d H:i" }}</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ req.Id }}">
+                                        <input type="hidden" name="request_type" value="{% if req|is_leave_request %}leave_request{% else %}general_request{% endif %}">
+                                        <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition duration-200">
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ req.Id }}">
+                                        <input type="hidden" name="request_type" value="{% if req|is_leave_request %}leave_request{% else %}general_request{% endif %}">
+                                        <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200">
+                                            Reject
+                                        </button>
+                                    </form>
+                                    <a href="{% if req|is_leave_request %}{% url 'leave_request_details' rid=req.Id %}{% else %}{% url 'requestdetails' rid=req.Id %}{% endif %}" class="text-blue-600 hover:underline">Review</a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <!-- Pagination for All Requests -->
+                {% if page_obj.has_other_pages %}
+                    <div class="mt-4 flex justify-center space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Previous</a>
+                        {% endif %}
+                        <span class="px-3 py-1">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-gray-600">No pending requests to review.</p>
+            {% endif %}
+        </div>
+
+        <!-- Processed Requests -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Processed Requests</h2>
+            {% if page_obj %}
+                <div class="space-y-4">
+                    {% for req in page_obj %}
+                        {% if req.status != 'pending' %}
+                            <div class="border-b pb-3 flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">
+                                        {% if req|is_leave_request %}
+                                            Leave Request
+                                        {% else %}
+                                            {% if req.request_type == 'resource' %}Resource Request
+                                            {% elif req.request_type == 'support' %}Support Request
+                                            {% elif req.request_type == 'approval' %}Approval Request
+                                            {% else %}Other Request{% endif %}
+                                        {% endif %}
+                                        - <span class="{% if req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}</span>
+                                    </p>
+                                    <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
+                                    <p class="text-sm text-gray-500">Submitted by: {{ req.requester }} on {{ req.request_date|date:"Y-m-d H:i" }}</p>
+                                </div>
+                                <a href="{% if req|is_leave_request %}{% url 'leave_request_details' rid=req.Id %}{% else %}{% url 'requestdetails' rid=req.Id %}{% endif %}" class="text-blue-600 hover:underline">View Details</a>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <!-- Pagination for All Requests -->
+                {% if page_obj.has_other_pages %}
+                    <div class="mt-4 flex justify-center space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Previous</a>
+                        {% endif %}
+                        <span class="px-3 py-1">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-gray-600">No processed requests.</p>
+            {% endif %}
+        </div>
+
+        <div class="mt-4">
+            <a href="{% url 'dashboard' %}" class="text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-2"></i>Back to Dashboard</a>
+        </div>
     </div>
-    <div class="max-w-xl mx-auto">
-      <div
-         class="p-4 max-w-md bg-white rounded-lg border shadow-md sm:p-8 dark:bg-gray-800 dark:border-gray-700"
-         >
-      <div class="flex justify-between items-center mb-4">
-         <h3 class="text-xl font-bold leading-none text-gray-900 dark:text-white">
-            Request you got...
-         </h3>
-      </div>
-      <div class="flow-root">
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
-      {% for info in requests %}
-      <div class="flex items-center space-x-4">
-         <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate dark:text-white">
-               Requested By: <b>{{info.requesterId}}</b>
-            </p>
-         </div>
-      </div>
-      Request Date: {{info.requestDate}}<br>
-      <div style="overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 1; /* number of lines to show */
-              line-clamp: 1; 
-      -webkit-box-orient: vertical;">
-      <b>Request Message : </b> {{info.requestMessage}}<br>
-   </div>
-      <a style="color:blueviolet;" href = "{% url 'requestdetails' rid=info.id %}">View Details</a>
-      <br>
-      <div style="height: 2px; width: 500; background-color: black; border-radius: 10px; margin:10px 0px;"></div>
-      {% endfor %}
-    
 </section>
 {% endblock %}

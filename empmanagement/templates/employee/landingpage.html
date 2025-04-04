@@ -2,158 +2,403 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Tracking System</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fontawesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            indigo: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
   <link rel="stylesheet" href="{% static 'landingpage.css' %}">
+  <style>
+    .gradient-bg {
+      background: linear-gradient(120deg, #3730a3 0%, #4f46e5 100%);
+      color: white;
+    }
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .text-blue {
+      color: white;
+    }
+  </style>
 </head>
-<body>
-  <nav>
-    <div class="nav-container">
-      <a href="#" class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" 
-                stroke="url(#logo-gradient)" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M7 9h10M7 12h10M7 15h6" 
-                stroke="url(#logo-gradient)" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color: var(--primary)"/>
-              <stop offset="100%" style="stop-color: var(--primary-dark)"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span class="logo-text">ETS</span>
-      </a>
-      <button class="hamburger" aria-label="Toggle menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      <ul class="nav-menu">
-        <li class="nav-item">
-          <a href="#features" class="nav-link">Features</a>
-        </li>
-        <li class="nav-item">
-          <a href="#about" class="nav-link">About</a>
-        </li>
-        <li class="nav-item">
-          <a href="#contact" class="nav-link">Contact Us</a>
-        </li>
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="accountDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Account
-            </a>
-            <div class="dropdown-menu" aria-labelledby="accountDropdown">
-              <a class="dropdown-item" href="{% url 'login_user' %}">Sign In</a>
-              <a class="dropdown-item" href="{% url 'signup' %}">Sign Up</a>
-            </div>
-          </li>
-      </ul>
+<body class="font-sans text-gray-800 antialiased">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 flex items-center">
+            <span class="text-indigo-600 text-xl font-bold">EmpTrack</span>
+          </div>
+          <div class="hidden md:ml-6 md:flex md:space-x-8">
+            <a href="#hero" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-indigo-500">Home</a>
+            <a href="#features" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent">Features</a>
+            <a href="#security" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent">Security</a>
+            <a href="#contact" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent">Contact</a>
+          </div>
+        </div>
+        <div class="hidden md:flex items-center">
+          <a href="#cta" class="ml-8 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Get Started
+          </a>
+        </div>
+        <div class="-mr-2 flex items-center md:hidden">
+          <button id="mobile-menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-expanded="false">
+            <span class="sr-only">Open main menu</span>
+            <i class="fa-solid fa-bars w-6 h-6"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile menu, show/hide based on menu state -->
+    <div id="mobile-menu" class="mobile-menu transform -translate-x-full md:hidden absolute bg-white w-full shadow-md">
+      <div class="pt-2 pb-3 space-y-1">
+        <a href="#hero" class="block pl-3 pr-4 py-2 border-l-4 border-indigo-500 text-base font-medium text-indigo-700 bg-indigo-50">Home</a>
+        <a href="#features" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800">Features</a>
+        <a href="#security" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800">Security</a>
+        <a href="#contact" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800">Contact</a>
+      </div>
+      <div class="pt-4 pb-3 border-t border-gray-200">
+        <a href="#cta" class="block w-full text-center mx-4 mb-3 px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+          Get Started
+        </a>
+      </div>
     </div>
   </nav>
 
-  <section class="hero">
-    <div class="hero-content">
-      <h1 class="animate">Streamline Your<br>Workforce Management</h1>
-      <p class="animate delay-1">Track attendance, manage tasks, and handle employee requests—all in one powerful platform.</p>
-    </div>
-  </section>
-
-  <section id="features" class="features">
-    <div class="section-header">
-      <h2 class="animate">Powerful Features</h2>
-      <p class="animate delay-1">Everything you need to manage your workforce effectively</p>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card animate delay-1">
-        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v6l4 2"/>
-        </svg>
-        <h3>Attendance Tracking</h3>
-        <p>Automated time tracking with flexible check-in options</p>
-      </div>
-      <div class="feature-card animate delay-2">
-        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-        </svg>
-        <h3>Task Management</h3>
-        <p>Assign, track, and manage team tasks efficiently</p>
-      </div>
-      <div class="feature-card animate delay-2">
-        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 01-3.46 0"/>
-        </svg>
-        <h3>Notice Board</h3>
-        <p>Keep everyone informed with digital announcements</p>
-      </div>
-      <div class="feature-card animate delay-3">
-        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <path d="M14 2v6h6"/>
-          <path d="M16 13H8"/>
-          <path d="M16 17H8"/>
-          <path d="M10 9H8"/>
-        </svg>
-        <h3>Request Management</h3>
-        <p>Streamline leave and resource requests</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="benefits" class="benefits">
-    <div class="benefits-container">
-      <div class="benefits-image animate">
-        <img src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80" alt="Modern office workspace">
-      </div>
-      <div class="benefits-content">
-        <h2 class="animate">Transform Your Workplace</h2>
-        <div class="benefit-item animate delay-1">
-          <h3>Increased Productivity</h3>
-          <p>Automate routine tasks and free up time for strategic work</p>
+  <!-- Hero Section -->
+  <section id="hero" class="gradient-bg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div class="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+        <div class="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
+          <h1 class="text-4xl tracking-tight font-extrabold text-blue sm:text-5xl md:text-6xl">
+            <span class="block">Simplify Employee</span>
+            <span class="block">Tracking & Management</span>
+          </h1>
+          <p class="mt-3 text-base text-blue sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
+            A comprehensive solution to track attendance, manage tasks, monitor performance, and streamline workplace operations.
+          </p>
+          <div class="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
+            <div class="flex flex-col sm:flex-row gap-4 sm:justify-center lg:justify-start">
+              <a href="{% url 'signup' %}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-gray-50 shadow-sm">
+                <i class="fa-solid fa-user-plus mr-2"></i> Sign Up
+              </a>
+              <a href="{% url 'login_user' %}" class="inline-flex items-center justify-center px-5 py-3 border border-white text-base font-medium rounded-md text-white hover:bg-indigo-700 hover:bg-opacity-30">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+              </a>
+            </div>
+          </div>
         </div>
-        <div class="benefit-item animate delay-2">
-          <h3>Better Communication</h3>
-          <p>Keep everyone aligned with centralized communication</p>
-        </div>
-        <div class="benefit-item animate delay-3">
-          <h3>Data-Driven Decisions</h3>
-          <p>Make informed decisions with comprehensive analytics</p>
+        <div class="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6">
+          <div class="relative mx-auto w-full rounded-xl shadow-lg overflow-hidden">
+            <img class="w-full h-auto object-cover" src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80" alt="Employee working on dashboard">
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="about" class="about">
-    <div class="about-container">
-      <h2 class="animate">About ETS</h2>
-      <p class="animate delay-1">
-        Employee Tracking System (ETS) is a comprehensive workforce management solution designed to streamline your organization's operations. With years of experience in developing enterprise solutions, we understand the challenges of modern workforce management.
-      </p>
-      <p class="animate delay-2">
-        Our mission is to provide businesses with powerful tools that enhance productivity, improve communication, and facilitate data-driven decision-making. We're committed to continuous innovation and exceptional customer support.
-      </p>
-    </div>
-  </section>
+  <!-- Features Section -->
+  <section id="features" class="py-16 md:py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Core Features</h2>
+        <p class="text-lg text-gray-600">Comprehensive tools to manage your team efficiently</p>
+      </div>
 
-  <section id="contact" class="contact">
-    <div class="contact-container">
-      <h2 class="animate">Get in Touch</h2>
-      <div class="contact-info animate delay-1">
-        <p>Have questions about ETS? We're here to help!</p>
-        <p>Email: <a href="mailto:patelhadaisa@gmail.com">patelhadaisa@gmail.com</a></p>
-        <p>Phone: <a href="tel:+254791006792">+254 791 006 792</a></p>
-        <p>Hours: Monday - Friday, 8:30 AM - 6:00 PM EST</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-clock text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Attendance Tracking</h3>
+          <p class="text-gray-600">Real-time tracking of employee attendance, punctuality, and work hours with detailed reports.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-list-check text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Task Management</h3>
+          <p class="text-gray-600">Assign, track, and manage tasks with deadlines, priorities, and progress tracking.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-calendar text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Leave Management</h3>
+          <p class="text-gray-600">Streamlined leave request and approval workflow with calendar integration.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-bell text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Real-time Notifications</h3>
+          <p class="text-gray-600">Instant alerts for requests, approvals, deadlines, and important announcements.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-shield-halved text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Role-Based Access</h3>
+          <p class="text-gray-600">Customize permissions and access levels for different roles within your organization.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 feature-card border border-gray-100">
+          <div class="bg-indigo-100 w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Performance Analytics</h3>
+          <p class="text-gray-600">Comprehensive reporting with insights into productivity and performance metrics.</p>
+        </div>
       </div>
     </div>
   </section>
 
-  <footer>
-    <p>&copy; <script>document.write(new Date().getFullYear())</script> Employee Tracking System. All rights reserved.</p>
+  <!-- Security Section -->
+  <section id="security" class="py-16 md:py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+        <div class="lg:col-span-5">
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Secure & Compliant</h2>
+          <p class="text-lg text-gray-600 mb-8">Your data security is our top priority. We implement industry-leading security measures to protect your information.</p>
+          
+          <div class="space-y-4">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <i class="fa-solid fa-lock text-indigo-600 mt-1"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-lg font-medium text-gray-900">Data Encryption</h3>
+                <p class="mt-1 text-gray-600">All data in transit and at rest is encrypted using industry-standard protocols.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <i class="fa-solid fa-shield text-indigo-600 mt-1"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-lg font-medium text-gray-900">GDPR Compliance</h3>
+                <p class="mt-1 text-gray-600">Our system is fully compliant with GDPR and other privacy regulations.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <i class="fa-solid fa-user-lock text-indigo-600 mt-1"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-lg font-medium text-gray-900">Access Control</h3>
+                <p class="mt-1 text-gray-600">Granular permission settings and multi-factor authentication for secure access.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <i class="fa-solid fa-database text-indigo-600 mt-1"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-lg font-medium text-gray-900">Regular Backups</h3>
+                <p class="mt-1 text-gray-600">Automated backups ensure your data is never lost and always recoverable.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-10 lg:mt-0 lg:col-span-7">
+          <img class="rounded-xl shadow-lg" src="https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&h=800&q=80" alt="Security dashboard and monitoring">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="py-16 md:py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mx-auto text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Contact Support</h2>
+        <p class="text-lg text-gray-600">Have questions or need assistance? Our team is here to help.</p>
+      </div>
+
+      <div class="max-w-3xl mx-auto">
+        <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-100">
+          <div class="bg-indigo-600 text-white px-6 py-4">
+            <h2 class="text-xl font-semibold">Send us a message</h2>
+          </div>
+          <div class="p-6">
+            <form id="contact-form" class="space-y-6">
+              <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <input type="text" name="name" id="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Your name">
+                <p id="name-error" class="mt-1 text-sm text-red-600 hidden"></p>
+              </div>
+
+              <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" name="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@example.com">
+                <p id="email-error" class="mt-1 text-sm text-red-600 hidden"></p>
+              </div>
+
+              <div>
+                <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                <textarea id="message" name="message" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="How can we help you?"></textarea>
+                <p id="message-error" class="mt-1 text-sm text-red-600 hidden"></p>
+              </div>
+
+              <div class="flex">
+                <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                  <i class="fas fa-paper-plane mr-2"></i>Send Message
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section id="cta" class="gradient-bg py-12 md:py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-blue mb-4">Ready to streamline your workforce management?</h2>
+        <p class="text-xl text-blue opacity-90 mb-8 max-w-3xl mx-auto">Join thousands of companies that trust our platform to manage their employees efficiently.</p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+          <a href="{% url 'signup' %}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-lg text-indigo-700 bg-white hover:bg-gray-50 shadow-sm">
+            <i class="fa-solid fa-user-plus mr-2"></i> Sign Up
+          </a>
+          <a href="{% url 'login_user' %}" class="inline-flex items-center justify-center px-5 py-3 border border-white text-base font-medium rounded-lg text-white hover:bg-indigo-700 hover:bg-opacity-30">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="col-span-1 md:col-span-2">
+          <div class="text-2xl font-bold mb-4">EmpTrack</div>
+          <p class="text-gray-300 mb-4">Simplify employee tracking and management with our comprehensive solution. Track attendance, manage tasks, and improve workplace productivity.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-white">
+              <i class="fab fa-facebook-f"></i>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-white">
+              <i class="fab fa-twitter"></i>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-white">
+              <i class="fab fa-linkedin-in"></i>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-white">
+              <i class="fab fa-instagram"></i>
+            </a>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-medium mb-4">Quick Links</h3>
+          <ul class="space-y-2">
+            <li><a href="#hero" class="text-gray-300 hover:text-white">Home</a></li>
+            <li><a href="#features" class="text-gray-300 hover:text-white">Features</a></li>
+            <li><a href="#security" class="text-gray-300 hover:text-white">Security</a></li>
+            <li><a href="#contact" class="text-gray-300 hover:text-white">Contact</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-medium mb-4">Contact</h3>
+          <ul class="space-y-2">
+            <li class="flex items-start">
+              <i class="fa-solid fa-location-dot mt-1 mr-2 text-gray-400"></i>
+              <span class="text-gray-300">123 Business Ave, Suite 100<br>San Francisco, CA 94107</span>
+            </li>
+            <li class="flex items-center">
+              <i class="fa-solid fa-envelope mr-2 text-gray-400"></i>
+              <a href="mailto:info@emptrack.com" class="text-gray-300 hover:text-white">info@emptrack.com</a>
+            </li>
+            <li class="flex items-center">
+              <i class="fa-solid fa-phone mr-2 text-gray-400"></i>
+              <a href="tel:+14155552671" class="text-gray-300 hover:text-white">+1 (415) 555-2671</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row md:justify-between md:items-center">
+        <div class="text-gray-400">
+          &copy; 2025 EmpTrack. All rights reserved.
+        </div>
+        <div class="mt-4 md:mt-0">
+          <ul class="flex space-x-6">
+            <li><a href="#" class="text-gray-400 hover:text-white text-sm">Privacy Policy</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white text-sm">Terms of Service</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white text-sm">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </footer>
+
+  <!-- JavaScript for interactivity -->
   <script src="{% static 'landingpage.js' %}"></script>
 </body>
 </html>

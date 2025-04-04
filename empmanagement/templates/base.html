@@ -1,132 +1,459 @@
+<!-- base.html -->
 {% load static %}
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!----======== CSS ======== -->
-    <link rel="stylesheet" href="{% static './css/style.css' %}">
-    
-    <!----===== Boxicons CSS ===== -->
-    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
-    <link href='https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css' rel='stylesheet'>
-    
-    <title>Employee Tracking System</title> 
-    
+    <title>Employee Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #1E90FF; /* Blue color palette */
-            --text-color: #ffffff;
-            --sidebar-bg: #1565C0;
-            --hover-bg: #0D47A1;
-        }
-
-
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #F4F7FC;
-        }
-        .sidebar {
-            background-color: var(--sidebar-bg);
-            color: var(--text-color);
-        }
-        .sidebar a {
-            color: var(--text-color);
-        }
-        .sidebar a:hover {
-            background-color: var(--hover-bg);
-        }
-        .menu-links .nav-text {
-            font-weight: 500;
-        }
-        .dashboard-container {
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: 'Poppins', sans-serif;
         }
         
+        /* Sidebar Styles */
+        #sidebar {
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+            height: 100vh;
+            position: fixed;
+            z-index: 40;
+        }
         
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #2563eb;
+        }
+        
+        .sidebar-item i {
+            min-width: 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* Custom hover effect */
+        .sidebar-item:hover i {
+            transform: translateX(2px);
+            transition: transform 0.2s ease;
+        }
+        
+        /* Sidebar toggle button styles */
+        #sidebar-toggle {
+            transition: all 0.3s ease;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        
+        #sidebar-toggle:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Main content area */
+        .main-content {
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+        
+        /* Tooltip for collapsed sidebar */
+        .sidebar-tooltip {
+            position: absolute;
+            left: 100%;
+            background-color: #2a2a2a;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.3rem;
+            font-size: 0.8rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            transform: translateX(8px);
+            white-space: nowrap;
+            z-index: 50;
+        }
+        
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+            
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            
+            #mobile-overlay {
+                visibility: hidden;
+                opacity: 0;
+                transition: opacity 0.3s ease, visibility 0.3s ease;
+            }
+            
+            #mobile-overlay.active {
+                visibility: visible;
+                opacity: 1;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            /* Mobile toggle button */
+            #mobile-toggle {
+                display: flex;
+            }
+        }
     </style>
 </head>
-<body>
-    <nav class="sidebar close">
-        <header>
-            <div class="text logo-text">
-                <span class="logo-title">Employee Tracking System</span>
-            </div>
-            
-        <i class='toggle'></i>
-        </header>
-
-        <div class="menu-bar">
-            <div class="menu">
-                <ul class="menu-links">
-                    <li class="nav-link">
-                        <a href="/ems/dashboard">
-                            <i class='bx bx-home-alt icon'></i>
-                            <span class="text nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/assignwork">
-                            <i class='bx bx-bar-chart-alt-2 icon'></i>
-                            <span class="text nav-text">Assign Work</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/notice">
-                            <i class='bx bx-bell icon'></i>
-                            <span class="text nav-text">Notice</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/makeRequest">
-                            <i class='bx bx-message-error icon'></i>
-                            <span class="text nav-text">Request</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/attendance">
-                            <i class='bx bx-calendar icon'></i>
-                            <span class="text nav-text">Attendance</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/mywork">
-                            <i class='bx bx-task icon'></i>
-                            <span class="text nav-text">My Work</span>
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <a href="/ems/editAW">
-                            <i class='bx bx-edit-alt icon'></i>
-                            <span class="text nav-text">Edit Assigned Works</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bottom-content">
-                <li class="">
-                    <a href="/logout">
-                        <i class='bx bx-log-out icon'></i>
-                        <span class="text nav-text">Logout</span>
-                    </a>
-                </li>
-            </div>
-        </div>
-    </nav>
-
+<body class="bg-gray-50">
+    <!-- Mobile Menu Toggle -->
+    <div id="mobile-toggle" class="fixed top-4 left-4 z-50 md:hidden bg-white rounded-full shadow-md p-2 cursor-pointer">
+        <i class="fas fa-bars text-gray-700"></i>
+    </div>
     
-    <div class="content" id="content">
-        {% block content %}
-        {% endblock %}
+    <!-- Mobile Overlay (darkens the screen when sidebar is open) -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"></div>
+    
+    <div id="app" class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-white shadow-md border-r border-gray-200 flex flex-col">
+            <!-- Sidebar Header with Logo -->
+            <div class="p-4 border-b flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="text-blue-600 font-bold text-lg sidebar-logo">EmpTrack</div>
+                </div>
+                <div id="sidebar-toggle" class="cursor-pointer hover:bg-gray-100 p-2 rounded-full">
+                    <i class="fas fa-chevron-left text-gray-500"></i>
+                </div>
+            </div>
+
+           <!-- Navigation Menu -->
+<nav class="flex-grow px-4 py-6 space-y-1 overflow-y-auto">
+    <!-- General Items (All Roles) -->
+    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/dashboard' %}active{% endif %}">
+        <i class="fas fa-home mr-3 text-gray-500"></i>
+        <a href="{% url 'dashboard' %}" class="text-sm truncate sidebar-text">Dashboard</a>
+        <span class="sidebar-tooltip">Dashboard</span>
+    </div>
+    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/profile' %}active{% endif %}">
+        <i class="fas fa-user mr-3 text-gray-500"></i>
+        <a href="{% url 'profile' %}" class="text-sm truncate sidebar-text">Your Profile</a>
+        <span class="sidebar-tooltip">Your Profile</span>
+    </div>
+    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notifications' %}active{% endif %}">
+        <i class="fas fa-envelope mr-3 text-gray-500"></i>
+        <a href="{% url 'notifications' %}" class="text-sm truncate sidebar-text">Notifications</a>
+        {% if unread_notifications_count > 0 %}
+            <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ unread_notifications_count }}</span>
+        {% endif %}
+        <span class="sidebar-tooltip">Notifications</span>
     </div>
 
+    <!-- Manager/Admin Items -->
+    {% if employee.role == 'manager' or employee.role == 'admin' %}
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/assignwork' %}active{% endif %}">
+            <i class="fas fa-briefcase mr-3 text-gray-500"></i>
+            <a href="{% url 'assignwork' %}" class="text-sm truncate sidebar-text">Assign Work</a>
+            <span class="sidebar-tooltip">Assign Work</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/editAW' %}active{% endif %}">
+            <i class="fas fa-edit mr-3 text-gray-500"></i>
+            <a href="{% url 'assignedworklist' %}" class="text-sm truncate sidebar-text">Edit Assigned Works</a>
+            <span class="sidebar-tooltip">Edit Assigned Works</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/productivity' %}active{% endif %}">
+            <i class="fas fa-chart-line mr-3 text-gray-500"></i>
+            <a href="{% url 'productivity_dashboard' %}" class="text-sm truncate sidebar-text">Productivity Dashboard</a>
+            <span class="sidebar-tooltip">Productivity Dashboard</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/managerial-requests' %}active{% endif %}">
+            <i class="fas fa-check-circle mr-3 text-gray-500"></i>
+            <a href="{% url 'managerial_requests' %}" class="text-sm truncate sidebar-text">Managerial Requests</a>
+            {% if pending_approvals_count > 0 %}
+                <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_approvals_count }}</span>
+            {% endif %}
+            <span class="sidebar-tooltip">Managerial Requests</span>
+        </div>
+    {% endif %}
 
-    <script src="{% static './js/script.js' %}"></script>
+    <!-- HR/Admin Items -->
+    {% if employee.role == 'hr' or employee.role == 'admin' %}
+        <div class="mt-4 mb-2 px-3">
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/hr-dashboard' %}active{% endif %}">
+            <i class="fas fa-briefcase mr-3 text-gray-500"></i>
+            <a href="{% url 'hr_dashboard' %}" class="text-sm truncate sidebar-text">HR Dashboard</a>
+            <span class="sidebar-tooltip">HR Dashboard</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-roles' %}active{% endif %}">
+            <i class="fas fa-users mr-3 text-gray-500"></i>
+            <a href="{% url 'manage_roles' %}" class="text-sm truncate sidebar-text">Manage Roles</a>
+            <span class="sidebar-tooltip">Manage Roles</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/review-role-changes' %}active{% endif %}">
+            <i class="fas fa-user-check mr-3 text-gray-500"></i>
+            <a href="{% url 'review_role_changes' %}" class="text-sm truncate sidebar-text">Review Role Changes</a>
+            {% if pending_role_changes_count > 0 %}
+                <span class="ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">{{ pending_role_changes_count }}</span>
+            {% endif %}
+            <span class="sidebar-tooltip">Review Role Changes</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/role-change-history' %}active{% endif %}">
+            <i class="fas fa-history mr-3 text-gray-500"></i>
+            <a href="{% url 'role_change_history' %}" class="text-sm truncate sidebar-text">Role Change History</a>
+            <span class="sidebar-tooltip">Role Change History</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-requests' %}active{% endif %}">
+            <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
+            <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Requests</a>
+            <span class="sidebar-tooltip">Employee Requests</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-management' %}active{% endif %}">
+            <i class="fas fa-user-friends mr-3 text-gray-500"></i>
+            <a href="{% url 'employee_management' %}" class="text-sm truncate sidebar-text">Employee Management</a>
+            <span class="sidebar-tooltip">Employee Management</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/system-settings' %}active{% endif %}">
+            <i class="fas fa-cog mr-3 text-gray-500"></i>
+            <a href="{% url 'system_settings' %}" class="text-sm truncate sidebar-text">System Settings</a>
+            <span class="sidebar-tooltip">System Settings</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/audit-logs' %}active{% endif %}">
+            <i class="fas fa-file-alt mr-3 text-gray-500"></i>
+            <a href="{% url 'audit_logs' %}" class="text-sm truncate sidebar-text">Audit Logs</a>
+            <span class="sidebar-tooltip">Audit Logs</span>
+        </div>
+    {% endif %}
+
+    <!-- Employee Tools (Non-Admin/HR Roles) -->
+    {% if employee.role == 'employee' or employee.role == 'manager' %}
+        <div class="mt-4 mb-2 px-3">
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee Tools</div>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/mywork' %}active{% endif %}">
+            <i class="fas fa-tasks mr-3 text-gray-500"></i>
+            <a href="{% url 'mywork' %}" class="text-sm truncate sidebar-text">My Work</a>
+            <span class="sidebar-tooltip">My Work</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/notice' %}active{% endif %}">
+            <i class="fas fa-bell mr-3 text-gray-500"></i>
+            <a href="{% url 'notice' %}" class="text-sm truncate sidebar-text">Notices</a>
+            <span class="sidebar-tooltip">Notices</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/makeRequest' %}active{% endif %}">
+            <i class="fas fa-message mr-3 text-gray-500"></i>
+            <a href="{% url 'makeRequest' %}" class="text-sm truncate sidebar-text">Requests</a>
+            <span class="sidebar-tooltip">Requests</span>
+        </div>
+        <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/attendance' %}active{% endif %}">
+            <i class="fas fa-calendar mr-3 text-gray-500"></i>
+            <a href="{% url 'attendance' %}" class="text-sm truncate sidebar-text">Attendance</a>
+            <span class="sidebar-tooltip">Attendance</span>
+        </div>
+    {% endif %}
+</nav>
+
+            <!-- User info and Logout -->
+            <div class="p-4 border-t mt-auto">
+                <div class="sidebar-item p-3 cursor-pointer flex items-center justify-start">
+                    <i class="fas fa-sign-out-alt mr-3 text-gray-500"></i>
+                    <a href="{% url 'logout_user' %}" class="text-sm truncate sidebar-text">Logout</a>
+                    <span class="sidebar-tooltip">Logout</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow p-6 main-content" style="margin-left: 256px;">
+            <div class="max-w-6xl mx-auto">
+                {% block content %}
+                    <!-- Default content (can be overridden by child templates) -->
+                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Employee Dashboard</h1>
+                    <!-- Quick Stats Grid -->
+                    <div class="grid md:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
+                            <h3 class="text-lg font-semibold mb-4">Total Employees</h3>
+                            <p class="text-3xl font-bold text-blue-600">{{ total_employees|default:"0" }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
+                            <h3 class="text-lg font-semibold mb-4">Pending Requests</h3>
+                            <p class="text-3xl font-bold text-yellow-600">{{ pending_requests|default:"0" }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
+                            <h3 class="text-lg font-semibold mb-4">Recent Notices</h3>
+                            <p class="text-3xl font-bold text-green-600">{{ recent_notices|length|default:"0" }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
+                            <h3 class="text-lg font-semibold mb-4">Departments</h3>
+                            <p class="text-3xl font-bold text-purple-600">{{ departments|default:"0" }}</p>
+                        </div>
+                    </div>
+                    <!-- Recent Activity -->
+                    <div class="mt-8 bg-white p-6 rounded-xl shadow-md">
+                        <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
+                        <div class="space-y-4">
+                            {% for notice in recent_notices %}
+                                <div class="border-b pb-3">
+                                    <p class="font-medium">{{ notice.title }}</p>
+                                    <span class="text-sm text-gray-500">{{ notice.publishDate|date:"Y-m-d" }}</span>
+                                </div>
+                            {% empty %}
+                                <div>
+                                    <p class="font-medium">No recent activity.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            function init() {
+                // DOM elements
+                const sidebar = document.getElementById('sidebar');
+                const sidebarToggle = document.getElementById('sidebar-toggle');
+                const sidebarItems = document.querySelectorAll('.sidebar-item');
+                const mainContent = document.querySelector('.main-content');
+                const mobileToggle = document.getElementById('mobile-toggle');
+                const mobileOverlay = document.getElementById('mobile-overlay');
+                const sidebarTooltips = document.querySelectorAll('.sidebar-tooltip');
+                const sidebarLogo = document.querySelector('.sidebar-logo');
+                const sidebarText = document.querySelectorAll('.sidebar-text');
+                const toggleIcon = sidebarToggle.querySelector('i');
+                
+                // Helper functions
+                function showTooltips() {
+                    sidebarItems.forEach((item, index) => {
+                        item.addEventListener('mouseenter', () => {
+                            if (sidebar.classList.contains('collapsed')) {
+                                sidebarTooltips[index].style.opacity = '1';
+                            }
+                        });
+                        
+                        item.addEventListener('mouseleave', () => {
+                            sidebarTooltips[index].style.opacity = '0';
+                        });
+                    });
+                }
+                
+                function expandSidebar() {
+                    sidebar.style.width = '256px';
+                    sidebar.classList.remove('collapsed');
+                    mainContent.style.marginLeft = '256px';
+                    sidebarText.forEach(text => text.classList.remove('hidden'));
+                    sidebarLogo.classList.remove('hidden');
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-left');
+                    localStorage.setItem('sidebarState', 'expanded');
+                }
+                
+                function collapseSidebar() {
+                    sidebar.style.width = '5rem';
+                    sidebar.classList.add('collapsed');
+                    mainContent.style.marginLeft = '5rem';
+                    sidebarText.forEach(text => text.classList.add('hidden'));
+                    sidebarLogo.classList.add('hidden');
+                    toggleIcon.classList.remove('fa-chevron-left');
+                    toggleIcon.classList.add('fa-chevron-right');
+                    localStorage.setItem('sidebarState', 'collapsed');
+                }
+                
+                // Load saved state
+                const savedState = localStorage.getItem('sidebarState');
+                if (savedState === 'collapsed') {
+                    collapseSidebar();
+                    showTooltips();
+                }
+                
+                // Sidebar toggle functionality
+                sidebarToggle.addEventListener('click', () => {
+                    if (sidebar.classList.contains('collapsed')) {
+                        expandSidebar();
+                    } else {
+                        collapseSidebar();
+                        showTooltips();
+                    }
+                });
+                
+                // Mobile toggle
+                mobileToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('open');
+                    mobileOverlay.classList.toggle('active');
+                });
+                
+                // Close sidebar when clicking overlay
+                mobileOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('active');
+                });
+                
+                // Handle window resize
+                function handleResize() {
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('open');
+                        mobileOverlay.classList.remove('active');
+                        mainContent.style.marginLeft = '0';
+                    } else {
+                        if (sidebar.classList.contains('collapsed')) {
+                            mainContent.style.marginLeft = '5rem';
+                        } else {
+                            mainContent.style.marginLeft = '256px';
+                        }
+                    }
+                }
+                
+                window.addEventListener('resize', handleResize);
+                handleResize(); // Initial call
+                
+                // Make sidebar items clickable (entire row)
+                sidebarItems.forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        // Only navigate if click was not on the actual link
+                        if (e.target.tagName !== 'A') {
+                            const link = this.querySelector('a');
+                            if (link) link.click();
+                        }
+                        
+                        // Close mobile sidebar after click
+                        if (window.innerWidth < 768) {
+                            sidebar.classList.remove('open');
+                            mobileOverlay.classList.remove('active');
+                        }
+                    });
+                });
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
 </body>
 </html>

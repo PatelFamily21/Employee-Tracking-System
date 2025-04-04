@@ -1,34 +1,65 @@
+<!-- employee/notice.html -->
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="home">
-    <div class="text" style="color: black;">
-        Notices    
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Notices</h1>
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">All Notices</h2>
+            {% if request.user.employee.role in 'hr,admin' %}
+                <a href="{% url 'create_notice' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                    Create Notice
+                </a>
+            {% endif %}
+        </div>
+        {% if page_obj %}
+            <div class="space-y-4">
+                {% for notice in page_obj %}
+                    <div class="border-b pb-3 flex justify-between items-center">
+                        <div>
+                            <p class="font-medium">
+                                {{ notice.title }}
+                                {% if notice.is_urgent %}
+                                    <span class="text-red-600 text-sm ml-2">[Urgent]</span>
+                                {% endif %}
+                            </p>
+                            <p class="text-sm text-gray-500">Posted on: {{ notice.publishDate|date:"Y-m-d H:i" }}</p>
+                            {% if notice.posted_by %}
+                                <p class="text-sm text-gray-500">Posted by: {{ notice.posted_by.firstName }} {{ notice.posted_by.lastName }}</p>
+                            {% endif %}
+                            <p class="text-sm text-gray-500">Viewed by: {{ notice.views.count }} employee(s)</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <a href="{% url 'noticedetail' id=notice.Id %}" class="text-blue-600 hover:underline">View Details</a>
+                            {% if request.user.employee.role in 'hr,admin' %}
+                                <a href="{% url 'edit_notice' id=notice.Id %}" class="text-green-600 hover:underline">Edit</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <!-- Pagination Controls -->
+            {% if page_obj.has_other_pages %}
+                <div class="mt-6 flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                        </p>
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Previous</a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Next</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <p class="text-gray-600">No notices available.</p>
+        {% endif %}
     </div>
-    <div class="max-w-xl mx-auto">
-      <div
-         class="p-4 max-w-md bg-white rounded-lg border shadow-md sm:p-8 dark:bg-gray-800 dark:border-gray-700"
-         >
-      <div class="flex justify-between items-center mb-4">
-         <h3 class="text-xl font-bold leading-none text-gray-900 dark:text-white">
-            Your Notices
-         </h3>
-      </div>
-      <div class="flow-root">
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
-      {% for info in notices %}
-      <div class="flex items-center space-x-4">
-         <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate dark:text-white">
-               <b>{{info.title}}</b>
-            </p>
-         </div>
-      </div>
-      {{info.publishDate}}<br>
-      <a style="color:blueviolet;" href = "{% url 'noticedetail' id=info.Id %}">View Details</a>
-      <br>
-      <hr>
-      {% endfor %}
-    
-</section>
+</div>
 {% endblock %}

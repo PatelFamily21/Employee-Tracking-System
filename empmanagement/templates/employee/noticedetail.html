@@ -1,59 +1,36 @@
+<!-- employee/noticedetail.html -->
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="home">
-    <div class="text">
-        Notice Details
-    <div class="flex flex-col">
-        <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-            <div class="overflow-hidden">
-                <table class="min-w-full">
-                <thead class="bg-white border-b">
-                    <tr>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                        <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Notice Info</div>
-                    </th>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                    </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Employee ID -->
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Title
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{noticedetail.title}}
-                    </td>
-                    </tr>
-                    <!-- Employee First Name -->
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Description
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{noticedetail.description}}
-                    </td>
-                    </tr>
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Publish Date
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{noticedetail.publishDate}}
-                    </td>
-                    </tr>
-                    
-                </tbody>
-                </table>
-            </div>
-            </div>
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ noticedetail.title }}</h1>
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <p class="text-sm text-gray-500 mb-2">Posted on: {{ noticedetail.publishDate|date:"Y-m-d H:i" }}</p>
+        {% if noticedetail.posted_by %}
+            <p class="text-sm text-gray-500 mb-2">Posted by: {{ noticedetail.posted_by.firstName }} {{ noticedetail.posted_by.lastName }}</p>
+        {% endif %}
+        {% if noticedetail.is_urgent %}
+            <p class="text-red-600 font-semibold mb-4">[Urgent Notice]</p>
+        {% endif %}
+        {% if noticedetail.departments.exists %}
+            <p class="text-sm text-gray-500 mb-2">Departments: 
+                {% for dept in noticedetail.departments.all %}
+                    {{ dept.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </p>
+        {% else %}
+            <p class="text-sm text-gray-500 mb-2">Departments: All</p>
+        {% endif %}
+        {% if noticedetail.expires_on %}
+            <p class="text-sm text-gray-500 mb-4">Expires on: {{ noticedetail.expires_on|date:"Y-m-d" }}</p>
+        {% endif %}
+        <p class="text-sm text-gray-500 mb-4">Viewed by: {{ noticedetail.views.count }} employee(s)</p>
+        <div class="prose max-w-none">
+            {{ noticedetail.description|linebreaks }}
         </div>
+        <div class="mt-4">
+            <a href="{% url 'notice' %}" class="text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-2"></i>Back to Notices</a>
         </div>
     </div>
-    
-    
-</section>
+</div>
 {% endblock %}

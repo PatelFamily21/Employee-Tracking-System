@@ -1,74 +1,274 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<section class="home">
-    <div class="text">
-        Notice Details
-    <div class="flex flex-col">
-        <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-            <div class="overflow-hidden">
-                <table class="min-w-full">
-                <thead class="bg-white border-b">
-                    <tr>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                        <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Notice Info</div>
-                    </th>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                    </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Assigned by
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{workdetails.assignerId}}
-                    </td>
-                    </tr>
-                    <!-- Employee First Name -->
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Assigned to
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{workdetails.taskerId}}
-                    </td>
-                    </tr>
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Work Description
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{workdetails.work}}
-                    </td>
-                    </tr>
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Assigned Date
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{workdetails.assignDate}}
-                    </td>
-                    </tr>
-                    <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        Due Date
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                        {{workdetails.dueDate}}
-                    </td>
-                    </tr>
+<section class="py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Work Details</h1>
+            <p class="text-gray-600">Comprehensive information about this task assignment</p>
+        </div>
+        
+        <!-- Status Card -->
+        <div class="mb-6">
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        {% if workdetails.status|lower == 'completed' %}
+                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <span class="ml-2 text-sm font-medium text-green-700">Completed</span>
+                        {% elif workdetails.status|lower == 'in_progress' %}
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                            <span class="ml-2 text-sm font-medium text-yellow-700">In Progress</span>
+                        {% else %}
+                            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <span class="ml-2 text-sm font-medium text-red-700">Not Started</span>
+                        {% endif %}
+                    </div>
                     
-                </tbody>
-                </table>
-            </div>
+                    <div class="text-sm text-gray-600">
+                        <span>Due: </span>
+                        <span class="font-medium">{{ workdetails.dueDate }}</span>
+                    </div>
+                </div>
             </div>
         </div>
+        
+        <!-- Main Content Card -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Card Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4">
+                <h2 class="text-lg font-medium text-white">Task Information</h2>
+            </div>
+            
+            <!-- Task Description -->
+            <div class="p-6 border-b border-gray-100 bg-blue-50">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">TASK DESCRIPTION</h3>
+                <p class="text-gray-800 whitespace-pre-line">{{ workdetails.work }}</p>
+            </div>
+            
+            <!-- Details Grid -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Assigned By -->
+                    <div>
+                        <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Assigned By</h3>
+                        <div class="flex items-center">
+                            <div class="p-2 rounded-full bg-blue-100 mr-3">
+                                <i class="fas fa-user-tie text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-900 font-medium">{{ workdetails.assignerId }}</p>
+                                <p class="text-xs text-gray-500">Task Creator</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Assigned To -->
+                    <div>
+                        <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Assigned To</h3>
+                        <div class="flex items-center">
+                            <div class="p-2 rounded-full bg-green-100 mr-3">
+                                <i class="fas fa-user text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-900 font-medium">{{ workdetails.taskerId }}</p>
+                                <p class="text-xs text-gray-500">Task Assignee</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Date Information -->
+                    <div>
+                        <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Timeline</h3>
+                        <div class="space-y-4">
+                            <!-- Assigned Date -->
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-full bg-gray-100 mr-3">
+                                    <i class="fas fa-calendar-plus text-gray-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Assigned Date</p>
+                                    <p class="text-gray-900">{{ workdetails.assignDate }}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Due Date -->
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-full bg-purple-100 mr-3">
+                                    <i class="fas fa-calendar-day text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Due Date</p>
+                                    <p class="text-gray-900">{{ workdetails.dueDate }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Information -->
+                    <div>
+                        <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Current Status</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                            {% if workdetails.status|lower == 'completed' %}
+                                <div class="flex items-center">
+                                    <div class="p-2 rounded-full bg-green-100 mr-3">
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                    <p class="text-green-700 font-medium">{{ workdetails.status|capfirst }}</p>
+                                </div>
+                            {% elif workdetails.status|lower == 'in_progress' %}
+                                <div class="flex items-center">
+                                    <div class="p-2 rounded-full bg-yellow-100 mr-3">
+                                        <i class="fas fa-spinner text-yellow-600"></i>
+                                    </div>
+                                    <p class="text-yellow-700 font-medium">{{ workdetails.status|capfirst }}</p>
+                                </div>
+                            {% else %}
+                                <div class="flex items-center">
+                                    <div class="p-2 rounded-full bg-red-100 mr-3">
+                                        <i class="fas fa-clock text-red-600"></i>
+                                    </div>
+                                    <p class="text-red-700 font-medium">{{ workdetails.status|capfirst }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Timeline -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <h3 class="text-sm font-medium text-gray-700 mb-4">Task Progress Timeline</h3>
+                <div class="relative">
+                    <!-- Timeline line -->
+                    <div class="absolute h-full w-0.5 bg-gray-200 left-5 top-0"></div>
+                    
+                    <!-- Timeline items -->
+                    <div class="ml-14 space-y-6 py-2">
+                        <!-- Assignment -->
+                        <div class="relative">
+                            <div class="flex absolute -left-9 items-center justify-center w-10 h-10 rounded-full bg-blue-100 ring-8 ring-white">
+                                <i class="fas fa-file-alt text-blue-600"></i>
+                            </div>
+                            <div class="ml-12">
+                                <h4 class="text-sm font-semibold text-gray-900">Task Assigned</h4>
+                                <p class="text-xs text-gray-500">{{ workdetails.assignDate }}</p>
+                                <p class="mt-1 text-xs text-gray-600">Task was assigned to {{ workdetails.taskerId }} by {{ workdetails.assignerId }}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Updates -->
+                        {% for log in workdetails.logs.all %}
+                            <div class="relative">
+                                <div class="flex absolute -left-9 items-center justify-center w-10 h-10 rounded-full 
+                                {% if log.status|lower == 'completed' %}
+                                    bg-green-100
+                                {% elif log.status|lower == 'in_progress' %}
+                                    bg-yellow-100
+                                {% else %}
+                                    bg-red-100
+                                {% endif %} 
+                                ring-8 ring-white">
+                                    {% if log.status|lower == 'completed' %}
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    {% elif log.status|lower == 'in_progress' %}
+                                        <i class="fas fa-spinner text-yellow-600"></i>
+                                    {% else %}
+                                        <i class="fas fa-clock text-red-600"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="ml-12">
+                                    <h4 class="text-sm font-semibold text-gray-900">Status Updated to {{ log.status|capfirst }}</h4>
+                                    <p class="text-xs text-gray-500">{{ log.updated_at }}</p>
+                                    <p class="mt-1 text-xs text-gray-600">Updated by {{ log.updated_by }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        <!-- Progress Report -->
+                        {% if workdetails.progress_report %}
+                            <div class="relative">
+                                <div class="flex absolute -left-9 items-center justify-center w-10 h-10 rounded-full bg-indigo-100 ring-8 ring-white">
+                                    <i class="fas fa-file-alt text-indigo-600"></i>
+                                </div>
+                                <div class="ml-12">
+                                    <h4 class="text-sm font-semibold text-gray-900">Progress Report</h4>
+                                    <p class="mt-1 text-xs text-gray-600">{{ workdetails.progress_report }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Uploaded File -->
+                        {% if workdetails.progress_file %}
+                            <div class="relative">
+                                <div class="flex absolute -left-9 items-center justify-center w-10 h-10 rounded-full bg-indigo-100 ring-8 ring-white">
+                                    <i class="fas fa-file-upload text-indigo-600"></i>
+                                </div>
+                                <div class="ml-12">
+                                    <h4 class="text-sm font-semibold text-gray-900">Uploaded File</h4>
+                                    <p class="mt-1 text-xs text-gray-600">
+                                        <a href="{{ workdetails.progress_file.url }}" target="_blank" class="text-blue-600 hover:underline">Download File</a>
+                                    </p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Deadline -->
+                        <div class="relative">
+                            <div class="flex absolute -left-9 items-center justify-center w-10 h-10 rounded-full bg-purple-100 ring-8 ring-white">
+                                <i class="fas fa-calendar-alt text-purple-600"></i>
+                            </div>
+                            <div class="ml-12">
+                                <h4 class="text-sm font-semibold text-gray-900">Due Date</h4>
+                                <p class="text-xs text-gray-500">{{ workdetails.dueDate }}</p>
+                                <p class="mt-1 text-xs text-gray-600">Task is expected to be completed by this date</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manager Feedback Section -->
+            {% if can_provide_feedback or workdetails.manager_feedback %}
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                    <h3 class="text-sm font-medium text-gray-700 mb-4">Manager Feedback</h3>
+                    {% if workdetails.manager_feedback %}
+                        <div class="bg-white rounded-lg p-4 border border-gray-100 mb-4">
+                            <p class="text-gray-800">{{ workdetails.manager_feedback }}</p>
+                        </div>
+                    {% endif %}
+                    {% if can_provide_feedback and not workdetails.is_locked %}
+                        <form method="post" class="space-y-4">
+                            {% csrf_token %}
+                            <div>
+                                <label class="block text-sm text-gray-700">Provide Feedback</label>
+                                <textarea name="manager_feedback" class="p-2 border rounded w-full" rows="3">{{ workdetails.manager_feedback }}</textarea>
+                            </div>
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit Feedback</button>
+                        </form>
+                    {% elif workdetails.is_locked %}
+                        <p class="text-red-600">This task is locked and no further feedback can be provided.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                <a href="javascript:history.back()" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back
+                </a>
+                
+                <a href="javascript:window.print()" class="px-4 py-2 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-print mr-2"></i>
+                    Print Details
+                </a>
+            </div>
         </div>
     </div>
-    
-    
 </section>
 {% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="py-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Managerial Requests</h1>
+        {% if pending_tasks %}
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Pending Approvals</h2>
+                <div class="space-y-4">
+                    {% for task in pending_tasks %}
+                        <div class="border-b pb-3 flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">{{ task.work|truncatewords:20 }}</p>
+                                <p class="text-sm text-gray-500">Assigned to: {{ task.taskerId }} | By: {{ task.assignerId }} | Due: {{ task.dueDate|date:"Y-m-d" }}</p>
+                            </div>
+                            <a href="{% url 'approve_work' task.Id %}" class="text-blue-600 hover:underline">Review & Approve</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <p class="text-gray-600">No pending approvals at this time.</p>
+            </div>
+        {% endif %}
+        <div class="mt-4">
+            <a href="{% url 'dashboard' %}" class="text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-2"></i>Back to Dashboard</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

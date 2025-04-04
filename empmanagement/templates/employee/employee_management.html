@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Employee Management</h1>
+
+            <!-- Messages -->
+            {% if messages %}
+                <div class="mb-6">
+                    {% for message in messages %}
+                        <div class="p-4 {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} rounded-lg">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Add Employee Form -->
+            <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Add Employee</h2>
+                <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <p class="text-red-600 text-sm">{{ field.errors }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    <div class="md:col-span-2">
+                        <button type="submit" name="action" value="add" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Add Employee</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Employee List -->
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Employees</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">EID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for emp in employees %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ emp.eID }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ emp.firstName }} {{ emp.lastName }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ emp.role }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ emp.department.name|default:"—" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <form method="post" class="inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="eID" value="{{ emp.eID }}">
+                                            <button type="submit" name="action" value="delete" class="text-red-600 hover:text-red-800" onclick="return confirm('Are you sure you want to delete {{ emp.firstName }} {{ emp.lastName }}?');">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">No employees found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

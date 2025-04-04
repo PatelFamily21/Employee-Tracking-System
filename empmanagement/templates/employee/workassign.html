@@ -1,85 +1,161 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<section class="home">
-    <div class="text" style="color: black;">
-        Assign Work
-            <form  method="post">
-                {% csrf_token %}
-                <div class="flex flex-col">
-                    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                      <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-                        <div class="overflow-hidden">
-                          <table class="min-w-full ">
-                            <thead class="bg-white border-b">
-                              <tr>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                  <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Enter Details Here.</div>
-                                </th>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                  {% if flag != "" %}
-                                    <div style="font-size: 20px; color: green;">{{flag}}</div>
-                                  {% endif %}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                             <!-- Employee ID -->
-                             <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                Select Assign work to Employee ID
-                              </td>
-                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  <div hidden>{{form.assignerId}}</div>
-                                  {{form.taskerId}}
-                                  
-                              </td>
-                            </tr>
-                               <!-- Employee First Name -->
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Write Work Details
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  <div style="border: 1px solid black; width: min-content; height: min-content;">{{form.work}}</div>
-                                </td>
-                              </tr>
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Select Assign Date
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    {{form.assignDate}}
-                                </td>
-                              </tr>
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Select Due Date
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    {{form.dueDate}}
-                                </td>
-                              </tr>
-                              
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    <input type="submit" style="height:45px; width:150px; border-radius: 20px; background-color: hsl(239, 100%, 51%); color:white;" value="Submit"> 
-                                    
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                    
-            </form>     
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Assign New Work</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold flex items-center">
+                    <i class="fas fa-clipboard-list mr-2"></i>Work Assignment Details
+                </h2>
+            </div>
             
-    
+            <div class="p-6">
+                <!-- Department Filter Card -->
+                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Filter Options</h3>
+                    <div class="mb-2">
+                        <label for="id_department" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                            <i class="fas fa-filter mr-2"></i>
+                            Filter by Department
+                        </label>
+                        <div class="relative">
+                            {{ form.department }}
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fas fa-building text-gray-400"></i>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-600">Select a department to filter available employees</p>
+                    </div>
+                </div>
+                
+                <!-- Form Content -->
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        {% for field in form %}
+                            {% if field.name != 'department' %}
+                                {% if field.name == 'work' or field.name == 'description' %}
+                                    <div class="md:col-span-2">
+                                {% else %}
+                                    <div>
+                                {% endif %}
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                        {% if field.name == 'taskerId' %}
+                                            <i class="fas fa-user mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'work' %}
+                                            <i class="fas fa-tasks mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'assignDate' %}
+                                            <i class="fas fa-calendar-day mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'dueDate' %}
+                                            <i class="fas fa-calendar-check mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'status' %}
+                                            <i class="fas fa-check-circle mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'priority' %}
+                                            <i class="fas fa-flag mr-2 text-gray-500"></i>
+                                        {% elif field.name == 'attachment' %}
+                                            <i class="fas fa-paperclip mr-2 text-gray-500"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle mr-2 text-gray-500"></i>
+                                        {% endif %}
+                                        {{ field.label }}
+                                    </label>
+                                    
+                                    <div class="relative">
+                                        {{ field }}
+                                        
+                                        {% if field.name == 'assignDate' or field.name == 'dueDate' %}
+                                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <i class="fas fa-calendar-alt text-gray-400"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if field.errors %}
+                                        <div class="mt-1 text-sm text-red-600 bg-red-50 rounded p-2 border border-red-100">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Tips Box -->
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                            Assignment Tips
+                        </h3>
+                        <ul class="text-sm text-gray-600 space-y-2 ml-6 list-disc">
+                            <li>Be specific about task requirements</li>
+                            <li>Set realistic deadlines</li>
+                            <li>Consider employee workload</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex mt-6">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i class="fas fa-paper-plane mr-2"></i>Assign Work
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const departmentSelect = document.querySelector('#id_department');
+        const taskerSelect = document.querySelector('#id_taskerId');
+
+        // Apply Tailwind classes to all form elements
+        document.querySelectorAll('select, input, textarea').forEach(element => {
+            element.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
+            
+            if (element.tagName === 'TEXTAREA') {
+                element.setAttribute('rows', '4');
+                element.setAttribute('placeholder', 'Enter detailed description of the work...');
+            }
+        });
+
+        // Handle department change event
+        departmentSelect.addEventListener('change', function() {
+            const department = this.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('department', department);
+            window.location.href = url.toString();
+        });
+        
+        // Animate form submission
+        const form = document.querySelector('form');
+        const submitButton = form.querySelector('button[type="submit"]');
+        
+        form.addEventListener('submit', function() {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Assigning...';
+        });
+        
+        // Focus first visible field
+        const firstField = document.querySelector('form select:not(#id_department), form input:not([type="hidden"]), form textarea');
+        if (firstField) {
+            firstField.focus();
+        }
+    });
+</script>
 {% endblock %}

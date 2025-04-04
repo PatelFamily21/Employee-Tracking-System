@@ -1,0 +1,115 @@
+<!-- employee/employee_requests.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Employee Requests</h1>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Leave Requests Table -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Leave Requests</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Request ID</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Employee</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Start Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">End Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Reason</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Request Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Status</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in page_obj %}
+                        <tr class="border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.Id }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.requester.firstName }} {{ request.requester.lastName }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.start_date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.end_date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.request_message }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.request_date|date:"Y-m-d H:i" }}
+                            </td>
+                            <td class="text-sm font-light px-6 py-4 whitespace-nowrap">
+                                <span class="{% if request.status == 'pending' %}text-yellow-600{% elif request.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ request.status|capfirst }}
+                                </span>
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {% if request.status == 'pending' %}
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ request.Id }}">
+                                        <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition duration-200">
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <form method="post" class="inline ml-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ request.Id }}">
+                                        <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200">
+                                            Reject
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'leave_request_details' rid=request.Id %}" class="ml-2 text-blue-600 hover:underline">View</a>
+                                {% else %}
+                                    <a href="{% url 'leave_request_details' rid=request.Id %}" class="text-blue-600 hover:underline">View</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-sm text-gray-900 font-light px-6 py-4 text-center">
+                                No leave requests found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+            <div class="mt-6 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                    </p>
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Previous</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

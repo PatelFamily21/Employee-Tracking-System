@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +68,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'employee.context_processors.employee_context',
+                'employee.context_processors.notifications',
+                'employee.context_processors.sidebar_context',
             ],
         },
     },
@@ -124,11 +128,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'empmanagement/static')
-]
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# empmanagement/settings.py
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configure whitenoise for compressed and cached files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -138,3 +144,31 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+APPEND_SLASH = True
+
+# Internationalization
+# https://docs.djangoproject.com/en/4.0/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'Africa/Nairobi'  # Set to East African Time (Nairobi, Kenya)
+
+USE_I18N = True
+
+USE_TZ = True
+
+# empmanagement/settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Celery Beat Schedule
+CELERY_BEAT_SCHEDULE = {
+    'check-overdue-and-inactive-tasks-every-day': {
+        'task': 'employee.tasks.check_overdue_and_inactive_tasks',
+        'schedule': 86400.0,  # Run every 24 hours (in seconds)
+    },
+}

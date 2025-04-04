@@ -1,75 +1,73 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="home">
-    <div class="text" style="color: black;">
-        Make Request
-        
-        <div class="flex flex-col">
-            <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-              <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-                <div class="overflow-hidden">
-                  <table class="min-w-full ">
-                    <thead class="bg-white border-b">
-                      <tr>
-                        <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                          <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Enter Details Here.</div>
-                        </th>
-                        <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                          <a href="/ems/viewRequest">  <input type="submit" style="height:45px; width:200px; border-radius: 20px; background-color: #6366f1; color:white;" value="View Your Requests"></a>
-                        </th>
-                      </tr>
-                    </thead>
-                    <form method="post">
-                      {% csrf_token %}
-                    <tbody>
-                      <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                            Request to Employee ID
-                        </td>
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          <div hidden>{{requestForm.requesterId}}</div>
-                            {{requestForm.destinationEmployeeId}}
-                        </td>
-                      </tr>
-                        <!-- Employee First Name -->
-                      <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          Write Request Message
-                        </td>
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          <div style="border: 1px solid black; width: min-content; height: min-content;">{{requestForm.requestMessage}}</div>
-                        </td>
-                      </tr>
-                      <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          Select Request Date
-                        </td>
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                            {{requestForm.requestDate}}
-                        </td>
-                      </tr>
-                      
-                      <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                          
-                        </td>
-                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                            <input type="submit" style="height:45px; width:150px; border-radius: 20px; background-color: #6366f1; color:white;" value="Submit">
-                        </td>
-                      </tr>
-                    </tbody>
-                  </form>
-                  </table>
+<section class="py-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Make a Request</h1>
+
+        <!-- Form to Submit a New Request -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Submit a New Request</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label for="id_request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
+                    {{ requestForm.request_type }}
+                    {% if requestForm.request_type.errors %}
+                        <p class="text-red-600 text-sm">{{ requestForm.request_type.errors }}</p>
+                    {% endif %}
                 </div>
-              </div>
-            </div>
-          </div>
+                <div class="mb-4">
+                    <label for="id_request_message" class="block text-sm font-medium text-gray-700">Request Message</label>
+                    {{ requestForm.request_message }}
+                    {% if requestForm.request_message.errors %}
+                        <p class="text-red-600 text-sm">{{ requestForm.request_message.errors }}</p>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label for="id_request_date" class="block text-sm font-medium text-gray-700">Request Date</label>
+                    {{ requestForm.request_date }}
+                    {% if requestForm.request_date.errors %}
+                        <p class="text-red-600 text-sm">{{ requestForm.request_date.errors }}</p>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label for="id_destination_employee" class="block text-sm font-medium text-gray-700">Recipient (optional)</label>
+                    {{ requestForm.destination_employee }}
+                    {% if requestForm.destination_employee.errors %}
+                        <p class="text-red-600 text-sm">{{ requestForm.destination_employee.errors }}</p>
+                    {% endif %}
+                    <p class="text-sm text-gray-500">If not selected, the request will be sent to the default recipient based on your role.</p>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit Request</button>
+            </form>
         </div>
-        {% if flag != "" %}
-        <script>
-          alert('{{ flag }}');
-        </script>
-        {% endif %}
+
+        <!-- List of Existing Requests -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Your Requests</h2>
+            {% if user_requests %}
+                <div class="space-y-4">
+                    {% for req in user_requests %}
+                        <div class="border-b pb-3">
+                            <p class="font-medium">{{ req.request_type|title }} - <span class="{% if req.status == 'pending' %}text-yellow-600{% elif req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}</span></p>
+                            <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
+                            <p class="text-sm text-gray-500">Submitted on: {{ req.request_date|date:"Y-m-d H:i" }}</p>
+                            <p class="text-sm text-gray-500">To: {{ req.destination_employee }}</p>
+                            <a href="{% url 'requestdetails' rid=req.Id %}" class="text-blue-600 hover:underline">View Details</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-600">You have no requests.</p>
+            {% endif %}
+        </div>
+    </div>
 </section>
+
+{% if flag != "" %}
+    <script>
+        alert('{{ flag }}');
+    </script>
+{% endif %}
 {% endblock %}

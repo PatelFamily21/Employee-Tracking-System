@@ -1,0 +1,79 @@
+<!-- employee/leave_request_details.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Leave Request Details</h1>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Request ID: {{ leave_request.Id }}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm text-gray-600">Requester:</p>
+                <p class="text-gray-900">{{ leave_request.requester.firstName }} {{ leave_request.requester.lastName }} ({{ leave_request.requester.eID }})</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Destination Employee:</p>
+                <p class="text-gray-900">{{ leave_request.destination_employee.firstName }} {{ leave_request.destination_employee.lastName }} ({{ leave_request.destination_employee.eID }})</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Request Date:</p>
+                <p class="text-gray-900">{{ leave_request.request_date|date:"Y-m-d H:i" }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Status:</p>
+                <p class="text-gray-900 {% if leave_request.status == 'approved' %}text-green-600{% elif leave_request.status == 'rejected' %}text-red-600{% else %}text-yellow-600{% endif %}">
+                    {{ leave_request.status|title }}
+                </p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Start Date:</p>
+                <p class="text-gray-900">{{ leave_request.start_date }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">End Date:</p>
+                <p class="text-gray-900">{{ leave_request.end_date }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-sm text-gray-600">Reason:</p>
+            <p class="text-gray-900">{{ leave_request.request_message }}</p>
+        </div>
+
+        <!-- Approval/Rejection Buttons for Destination Employee -->
+        {% if can_process %}
+            <div class="mt-6 flex space-x-4">
+                <form method="post" action="{% url 'employee_requests' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
+                    <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                        Approve
+                    </button>
+                </form>
+                <form method="post" action="{% url 'employee_requests' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
+                    <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200">
+                        Reject
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'notifications' %}" class="text-indigo-600 hover:underline">Back to Notifications</a>
+    </div>
+</div>
+{% endblock %}

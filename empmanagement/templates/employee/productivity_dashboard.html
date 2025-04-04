@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="py-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Productivity Dashboard</h1>
+
+        <!-- Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Total Tasks Assigned</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ total_tasks }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Completion Rate</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ completion_rate }}%</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Overdue Tasks</h3>
+                <p class="text-2xl font-bold text-red-600">{{ overdue_tasks }}</p>
+            </div>
+        </div>
+
+        <!-- Task Status Chart -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Task Status Breakdown (Chart)</h3>
+            <canvas id="taskStatusChart" height="100"></canvas>
+        </div>
+
+        <!-- Task Status Breakdown -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Task Status Breakdown</h3>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">Completed</span>
+                    <span class="text-sm font-medium text-green-600">{{ completed_tasks }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">In Progress</span>
+                    <span class="text-sm font-medium text-yellow-600">{{ in_progress_tasks }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">Pending</span>
+                    <span class="text-sm font-medium text-red-600">{{ pending_tasks }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+            <div class="space-y-4">
+                {% for log in recent_logs %}
+                    <div class="flex items-center">
+                        <div class="p-2 rounded-full 
+                        {% if log.status == 'completed' %}bg-green-100{% elif log.status == 'in_progress' %}bg-yellow-100{% else %}bg-red-100{% endif %} mr-3">
+                            {% if log.status == 'completed' %}
+                                <i class="fas fa-check-circle text-green-600"></i>
+                            {% elif log.status == 'in_progress' %}
+                                <i class="fas fa-spinner text-yellow-600"></i>
+                            {% else %}
+                                <i class="fas fa-clock text-red-600"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-900">{{ log.updated_by }} updated <a href="{% url 'workdetails' wid=log.work_assignment.Id %}" class="text-blue-600 hover:underline">{{ log.work_assignment.work|truncatewords:5 }}</a> to {{ log.status|capfirst }}</p>
+                            <p class="text-xs text-gray-500">{{ log.updated_at }}</p>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-sm text-gray-600">No recent activity.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('taskStatusChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Completed', 'In Progress', 'Pending'],
+                datasets: [{
+                    data: [{{ completed_tasks }}, {{ in_progress_tasks }}, {{ pending_tasks }}],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.6)',  // Green for completed
+                        'rgba(234, 179, 8, 0.6)',  // Yellow for in progress
+                        'rgba(239, 68, 68, 0.6)',  // Red for pending
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(234, 179, 8, 1)',
+                        'rgba(239, 68, 68, 1)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Task Status Distribution'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

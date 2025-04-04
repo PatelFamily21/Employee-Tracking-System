@@ -1,85 +1,252 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<section class="home">
-    <div class="text">
-        Edit Work
-            <form  method="post">
-                {% csrf_token %}
-                <div class="flex flex-col">
-                    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                      <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-                        <div class="overflow-hidden">
-                          <table class="min-w-full ">
-                            <thead class="bg-white border-b">
-                              <tr>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                  <div class="text" style="font-size: 18px; padding:5px 0px; color:black;">Enter Details Here.</div>
-                                </th>
-                                <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                                  
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                             <!-- Employee ID -->
-                             <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                Select Assign work to Employee ID
-                              </td>
-                              <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                <div hidden>{{filledForm.assignerId}}</div>
-                                  {{filledForm.taskerId}}
-                              </td>
-                            </tr>
-                               <!-- Employee First Name -->
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Write Work Details
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  <div style="border: 1px solid black; width: min-content; height: min-content; padding: 4px;">{{filledForm.work}}</div>
-                                </td>
-                              </tr>
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Select Assign Date
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    {{filledForm.assignDate}}
-                                </td>
-                              </tr>
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  Select Due Date
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    {{filledForm.dueDate}}
-                                </td>
-                              </tr>
-                              
-                              <tr class="bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100">
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                  
-                                </td>
-                                <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                                    <input type="submit" style="height:45px; width:150px; border-radius: 20px; background-color: #6366f1; color:white;" value="Submit">
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Edit Work Assignment</h2>
+            <div class="flex space-x-3">
+                <a href="javascript:history.back()" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </a>
+            </div>
+        </div>
+
+        {% if flag %}
+            <div class="mb-6 p-4 rounded-lg bg-green-100 text-green-700 border-l-4 border-green-500 flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3 text-lg"></i>
+                {{ flag }}
+            </div>
+        {% endif %}
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Form Card -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-indigo-600 text-white px-6 py-4">
+                        <h2 class="text-xl font-semibold">Update Task Information</h2>
                     </div>
-                  </div>
+                    
+                    <div class="p-6">
+                        <form method="post" class="space-y-6">
+                            {% csrf_token %}
+                            
+                            <!-- Assignee Selection -->
+                            <div>
+                                <label for="{{ filledForm.taskerId.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    <i class="fas fa-user mr-2 text-gray-500"></i>
+                                    Assigned To
+                                </label>
+                                <div class="relative">
+                                    {{ filledForm.taskerId }}
+                                </div>
+                            </div>
+                            
+                            <!-- Work Details -->
+                            <div>
+                                <label for="{{ filledForm.work.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    <i class="fas fa-tasks mr-2 text-gray-500"></i>
+                                    Work Details
+                                </label>
+                                <div>
+                                    {{ filledForm.work }}
+                                </div>
+                                <p class="mt-2 text-xs text-gray-600">Provide clear and specific instructions for this task</p>
+                            </div>
+                            
+                            <!-- Dates Section -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Assign Date -->
+                                <div>
+                                    <label for="{{ filledForm.assignDate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                        <i class="fas fa-calendar-day mr-2 text-gray-500"></i>
+                                        Assign Date
+                                    </label>
+                                    <div class="relative">
+                                        {{ filledForm.assignDate }}
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Due Date -->
+                                <div>
+                                    <label for="{{ filledForm.dueDate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                        <i class="fas fa-calendar-check mr-2 text-gray-500"></i>
+                                        Due Date
+                                    </label>
+                                    <div class="relative">
+                                        {{ filledForm.dueDate }}
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Status Selection -->
+                            <div>
+                                <label for="{{ filledForm.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    <i class="fas fa-check-circle mr-2 text-gray-500"></i>
+                                    Status
+                                </label>
+                                <div>
+                                    {{ filledForm.status }}
+                                </div>
+                                <div class="flex flex-wrap items-center mt-2 text-xs text-gray-600 gap-3">
+                                    <div class="flex items-center">
+                                        <span class="flex h-2 w-2 bg-green-400 rounded-full mr-1"></span>
+                                        <span>Completed</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="flex h-2 w-2 bg-yellow-400 rounded-full mr-1"></span>
+                                        <span>In Progress</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="flex h-2 w-2 bg-red-400 rounded-full mr-1"></span>
+                                        <span>Not Started</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden Fields -->
+                            {{ filledForm.assignerId.as_hidden }}
+                            
+                            <!-- Action Buttons -->
+                            <div class="flex mt-6">
+                                <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                    <i class="fas fa-save mr-2"></i>Update Task
+                                </button>
+                                <a href="javascript:history.back()" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                {% if flag != "" %}
-                <script>
-                  alert('{{ flag }}');
-                </script>
-                {% endif %}
-            </form>     
+            </div>
             
-    
+            <!-- Task Timeline Card -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-indigo-600 text-white px-6 py-4">
+                        <h2 class="text-xl font-semibold flex items-center">
+                            <i class="fas fa-history mr-2"></i>Task Timeline
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="relative pl-8">
+                            <!-- Timeline line -->
+                            <div class="absolute h-full w-0.5 bg-gray-200 left-2 top-0"></div>
+                            
+                            <!-- Timeline items -->
+                            <div class="space-y-8">
+                                <!-- Creation -->
+                                <div class="relative">
+                                    <div class="absolute left-0 top-1 flex items-center justify-center">
+                                        <div class="w-4 h-4 rounded-full bg-blue-500 z-10"></div>
+                                    </div>
+                                    <div class="ml-6">
+                                        <h4 class="text-sm font-semibold text-gray-900">Task Created</h4>
+                                        <p class="text-xs text-gray-500">{{ filledForm.assignDate.value|default:"" }}</p>
+                                        <p class="mt-1 text-xs text-gray-600">Initial task assignment</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Current Status -->
+                                <div class="relative">
+                                    <div class="absolute left-0 top-1 flex items-center justify-center">
+                                        <div class="w-4 h-4 rounded-full z-10
+                                        {% if filledForm.status.value|lower == 'completed' or filledForm.status.value|lower == 'done' %}
+                                            bg-green-500
+                                        {% elif filledForm.status.value|lower == 'in progress' or filledForm.status.value|lower == 'ongoing' %}
+                                            bg-yellow-500
+                                        {% else %}
+                                            bg-red-500
+                                        {% endif %}"></div>
+                                    </div>
+                                    <div class="ml-6">
+                                        <h4 class="text-sm font-semibold text-gray-900">Current Status</h4>
+                                        <p class="text-xs 
+                                        {% if filledForm.status.value|lower == 'completed' or filledForm.status.value|lower == 'done' %}
+                                            text-green-600
+                                        {% elif filledForm.status.value|lower == 'in progress' or filledForm.status.value|lower == 'ongoing' %}
+                                            text-yellow-600
+                                        {% else %}
+                                            text-red-600
+                                        {% endif %}">{{ filledForm.status.value|default:"" }}</p>
+                                        <p class="mt-1 text-xs text-gray-600">
+                                            {% if filledForm.status.value|lower == 'completed' or filledForm.status.value|lower == 'done' %}
+                                                Task has been completed
+                                            {% elif filledForm.status.value|lower == 'in progress' or filledForm.status.value|lower == 'ongoing' %}
+                                                Task is currently in progress
+                                            {% else %}
+                                                Task has not been started yet
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Due Date -->
+                                <div class="relative">
+                                    <div class="absolute left-0 top-1 flex items-center justify-center">
+                                        <div class="w-4 h-4 rounded-full bg-purple-500 z-10"></div>
+                                    </div>
+                                    <div class="ml-6">
+                                        <h4 class="text-sm font-semibold text-gray-900">Due Date</h4>
+                                        <p class="text-xs text-gray-500">{{ filledForm.dueDate.value|default:"" }}</p>
+                                        <p class="mt-1 text-xs text-gray-600">Deadline for task completion</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
+
+<!-- Add this script at the end to enhance the form UI -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add styling to Django form elements
+        const formElements = {
+            'taskerId': document.getElementById('{{ filledForm.taskerId.id_for_label }}'),
+            'work': document.getElementById('{{ filledForm.work.id_for_label }}'),
+            'assignDate': document.getElementById('{{ filledForm.assignDate.id_for_label }}'),
+            'dueDate': document.getElementById('{{ filledForm.dueDate.id_for_label }}'),
+            'status': document.getElementById('{{ filledForm.status.id_for_label }}'),
+        };
+        
+        // Apply Tailwind classes to all form elements
+        Object.values(formElements).forEach(element => {
+            if (element) {
+                element.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
+                
+                if (element.tagName === 'TEXTAREA') {
+                    element.setAttribute('rows', '4');
+                    element.setAttribute('placeholder', 'Enter detailed description of the work...');
+                }
+            }
+        });
+        
+        // Add visual indicator for status options
+        if (formElements.status) {
+            const options = formElements.status.options;
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                const value = option.value.toLowerCase();
+                
+                if (value.includes('complete') || value.includes('done')) {
+                    option.classList.add('text-green-600');
+                } else if (value.includes('progress') || value.includes('ongoing')) {
+                    option.classList.add('text-yellow-600');
+                } else if (value.includes('not') || value.includes('pending')) {
+                    option.classList.add('text-red-600');
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

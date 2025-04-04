@@ -1,0 +1,142 @@
+<!-- employee/notifications.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Notifications</h1>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Notifications List -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Your Notifications</h2>
+            {% if page_obj %}
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="mark_all_read" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-200">
+                        Mark All as Read
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Type</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Message</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Status</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for notification in page_obj %}
+                        <tr class="border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                            <td class="text-sm font-light px-6 py-4 whitespace-nowrap">
+                                {% if notification.request_type == 'leave_request' %}
+                                    <span class="text-blue-600">Leave Request</span>
+                                {% elif notification.request_type == 'leave_request_status' %}
+                                    <span class="text-blue-600">Leave Request Status</span>
+                                {% elif notification.request_type == 'managerial_request' %}
+                                    <span class="text-purple-600">Managerial Request</span>
+                                {% elif notification.request_type == 'managerial_request_status' %}
+                                    <span class="text-purple-600">Managerial Request Status</span>
+                                {% elif notification.request_type == 'work_assignment' %}
+                                    <span class="text-green-600">Work Assignment</span>
+                                {% elif notification.request_type == 'work_update' %}
+                                    <span class="text-green-600">Work Update</span>
+                                {% elif notification.request_type == 'work_feedback' %}
+                                    <span class="text-green-600">Work Feedback</span>
+                                {% elif notification.request_type == 'general_request' %}
+                                    <span class="text-orange-600">General Request</span>
+                                {% elif notification.request_type == 'general_request_status' %}
+                                    <span class="text-orange-600">General Request Status</span>
+                                {% elif notification.request_type == 'role_change_request' %}
+                                    <span class="text-red-600">Role Change Request</span>
+                                {% elif notification.request_type == 'role_change_request_status' %}
+                                    <span class="text-red-600">Role Change Request Status</span>
+                                {% elif notification.request_type == 'role_change' %}
+                                    <span class="text-red-600">Role Change</span>
+                                {% else %}
+                                    <span class="text-gray-600">General</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4">
+                                {{ notification.message|safe }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ notification.created_at|date:"Y-m-d H:i" }}
+                            </td>
+                            <td class="text-sm font-light px-6 py-4 whitespace-nowrap">
+                                {% if notification.is_read %}
+                                    <span class="text-green-600">Read</span>
+                                {% else %}
+                                    <span class="text-yellow-600">Unread</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {% if not notification.is_read %}
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="notification_id" value="{{ notification.id }}">
+                                        <button type="submit" name="action" value="mark_read" class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition duration-200">
+                                            Mark as Read
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-gray-500">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-sm text-gray-900 font-light px-6 py-4 text-center">
+                                No notifications found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+            <div class="mt-6 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                    </p>
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                            Previous
+                        </a>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        <a href="?page={{ num }}" class="px-3 py-2 rounded-lg {% if page_obj.number == num %}bg-indigo-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition duration-200">
+                            {{ num }}
+                        </a>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                            Next
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
