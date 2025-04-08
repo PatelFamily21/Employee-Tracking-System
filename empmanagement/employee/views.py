@@ -3,7 +3,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from .forms import workform, makeRequestForm
+from .forms import workform, makeRequestForm, EmployeeForm 
 from .models import Employee, Attendance, Notice, WorkAssignments, Department, Requests, Notification, WorkAssignmentLog, NoticeView
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -398,6 +398,9 @@ def noticedetail(request, id):
     return render(request, "employee/noticedetail.html", context)
 
 # employee/views.py
+# employee/views.py
+from .forms import NoticeForm  # Ensure NoticeForm is imported
+
 @role_required('hr', 'admin')
 def edit_notice(request, id):
     notice = get_object_or_404(Notice, Id=id)
@@ -405,6 +408,22 @@ def edit_notice(request, id):
         form = NoticeForm(request.POST, instance=notice)
         if form.is_valid():
             form.save()
+            employee = get_employee(request)
+            if employee:
+                max_title_length = 100 - len("Edited notice: ")
+                truncated_title = notice.title[:max_title_length]
+                action = f"Edited notice: {truncated_title}"
+                try:
+                    AuditLog.objects.create(
+                        performed_by=employee,
+                        action_type='update',  # Set the action type
+                        action=action,
+                        timestamp=timezone.now()
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Notice updated, but failed to log action: {str(e)}")
+            else:
+                messages.warning(request, "Could not log the edit action to audit log: Employee not found.")
             messages.success(request, "Notice updated successfully!")
             return redirect('notice')
     else:
@@ -420,17 +439,44 @@ def edit_notice(request, id):
 # employee/views.py
 from .models import AuditLog
 
+# employee/views.py
+from django.shortcuts import redirect, render, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from .decorators import role_required
+from .models import Notice, AuditLog
+from .context_processors import get_employee  # Import get_employee
+
+# employee/views.py
+from django.shortcuts import redirect, render, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from .decorators import role_required
+from .models import Notice, AuditLog
+from .context_processors import get_employee  # Import get_employee
+
 @role_required('hr', 'admin')
 def delete_notice(request, id):
     notice = get_object_or_404(Notice, Id=id)
-    notice_title = notice.title  # Store the title for the audit log
+    notice_title = notice.title
     notice.delete()
-    # Log the deletion
-    AuditLog.objects.create(
-        employee=request.user.employee,
-        action=f"Deleted notice: {notice_title}",
-        timestamp=timezone.now()
-    )
+    employee = get_employee(request)
+    if employee:
+        max_title_length = 100 - len("Deleted notice: ")
+        truncated_title = notice_title[:max_title_length]
+        action = f"Deleted notice: {truncated_title}"
+        try:
+            AuditLog.objects.create(
+                performed_by=employee,
+                action_type='delete',  # Set the action type
+                action=action,
+                timestamp=timezone.now()
+            )
+        except Exception as e:
+            messages.warning(request, f"Notice deleted, but failed to log action: {str(e)}")
+    else:
+        messages.warning(request, "Could not log the deletion to audit log: Employee not found.")
+    
     messages.success(request, "Notice deleted successfully!")
     return redirect('manage_notices')
 
@@ -446,21 +492,33 @@ def create_notice(request):
         form = NoticeForm(request.POST)
         if form.is_valid():
             notice = form.save(commit=False)
-            notice.posted_by = Employee.objects.get(eID=request.user.username)
-            # Generate a unique ID for the notice
+            employee = get_employee(request)
+            notice.posted_by = employee
             notice.Id = f"NOTICE{timezone.now().strftime('%Y%m%d%H%M%S')}"
             notice.save()
-            # Save the ManyToMany relationships (departments)
             form.save_m2m()
 
-            # Notify employees
+            if employee:
+                max_title_length = 100 - len("Created notice: ")
+                truncated_title = notice.title[:max_title_length]
+                action = f"Created notice: {truncated_title}"
+                try:
+                    AuditLog.objects.create(
+                        performed_by=employee,
+                        action_type='create',  # Set the action type
+                        action=action,
+                        timestamp=timezone.now()
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Notice created, but failed to log action: {str(e)}")
+
             employees_to_notify = Employee.objects.filter(
                 Q(department__in=notice.departments.all()) | Q(department__isnull=True)
             ).distinct()
-            for employee in employees_to_notify:
-                if not notice.departments.exists() or employee.department in notice.departments.all():
+            for emp in employees_to_notify:
+                if not notice.departments.exists() or emp.department in notice.departments.all():
                     Notification.objects.create(
-                        recipient=employee,
+                        recipient=emp,
                         message=f"New notice: {notice.title} <a href='/ems/noticedetail/{notice.Id}/' class='text-blue-600 hover:underline'>View</a>",
                         request_type='notice',
                         request_id=notice.Id
@@ -476,7 +534,6 @@ def create_notice(request):
         'action': 'Create',
     }
     return render(request, 'employee/notice_form.html', context)
-
 
 
 
@@ -1360,9 +1417,81 @@ def system_settings(request):
 
 from .models import AuditLog
 
+# employee/views.py
+from django.db.models import Q
+
+from django.http import HttpResponse
+import csv
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
 @role_required('admin')
 def audit_logs(request):
-    logs = AuditLog.objects.all().order_by('-timestamp')
+    logs = AuditLog.objects.all()
+
+    # Apply filters
+    action_filter = request.GET.get('action', '')
+    user_filter = request.GET.get('user', '')
+    date_filter = request.GET.get('date', '')
+
+    if action_filter:
+        logs = logs.filter(action_type=action_filter)
+    if user_filter:
+        logs = logs.filter(
+            Q(performed_by__firstName__icontains=user_filter) |
+            Q(performed_by__lastName__icontains=user_filter) |
+            Q(performed_by__eID__icontains=user_filter)
+        )
+    if date_filter:
+        try:
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            logs = logs.filter(timestamp__date=filter_date)
+        except ValueError:
+            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+
+    # Handle export
+    export_format = request.GET.get('export', '')
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="audit_logs.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Action Type', 'Action', 'Performed By', 'Timestamp', 'Details'])
+        for log in logs:
+            writer.writerow([
+                log.action_type,
+                log.action,
+                log.performed_by if log.performed_by else 'System',
+                log.timestamp,
+                log.details or '—'
+            ])
+        return response
+    elif export_format == 'pdf':
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        p.setFont("Helvetica", 12)
+        p.drawString(30, 750, "Audit Logs")
+        y = 730
+        p.setFont("Helvetica", 10)
+        p.drawString(30, y, "Action Type | Action | Performed By | Timestamp | Details")
+        y -= 20
+        for log in logs:
+            if y < 50:
+                p.showPage()
+                p.setFont("Helvetica", 10)
+                y = 750
+            performed_by = str(log.performed_by) if log.performed_by else 'System'
+            line = f"{log.action_type} | {log.action} | {performed_by} | {log.timestamp} | {log.details or '—'}"
+            p.drawString(30, y, line[:100])  # Truncate for PDF
+            y -= 20
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="audit_logs.pdf"'
+        return response
+
+    logs = logs.order_by('-timestamp')
     paginator = Paginator(logs, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -1370,6 +1499,9 @@ def audit_logs(request):
     context = {
         'page_obj': page_obj,
         'pending_role_changes_count': PendingRoleChange.objects.filter(status='pending').count(),
+        'action_filter': action_filter,
+        'user_filter': user_filter,
+        'date_filter': date_filter,
     }
     return render(request, 'employee/audit_logs.html', context)
 

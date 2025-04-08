@@ -261,11 +261,21 @@ class PendingRoleChange(models.Model):
         return f"{self.employee.eID}: {self.old_role} -> {self.new_role} ({self.status})"
     
 
+# employee/models.py
 class AuditLog(models.Model):
-    action = models.CharField(max_length=100)  # e.g., "Employee Added", "Role Changed"
+    ACTION_TYPES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('login', 'Login'),
+        ('other', 'Other'),
+    ]
+    
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES, default='other')  # New field for action type
+    action = models.CharField(max_length=100)  # Detailed description
     performed_by = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     timestamp = models.DateTimeField(auto_now_add=True)
-    details = models.TextField(blank=True, null=True)  # Optional additional info
+    details = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.action} by {self.performed_by} at {self.timestamp}"

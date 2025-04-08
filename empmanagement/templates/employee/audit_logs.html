@@ -18,20 +18,20 @@
                         <label for="action" class="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
                         <select id="action" name="action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <option value="">All Actions</option>
-                            <!-- You can populate these from your backend -->
-                            <option value="create">Create</option>
-                            <option value="update">Update</option>
-                            <option value="delete">Delete</option>
-                            <option value="login">Login</option>
+                            <option value="create" {% if action_filter == 'create' %}selected{% endif %}>Create</option>
+                            <option value="update" {% if action_filter == 'update' %}selected{% endif %}>Update</option>
+                            <option value="delete" {% if action_filter == 'delete' %}selected{% endif %}>Delete</option>
+                            <option value="login" {% if action_filter == 'login' %}selected{% endif %}>Login</option>
+                            <option value="other" {% if action_filter == 'other' %}selected{% endif %}>Other</option>
                         </select>
                     </div>
                     <div class="flex-1">
                         <label for="user" class="block text-sm font-medium text-gray-700 mb-1">User</label>
-                        <input type="text" id="user" name="user" placeholder="Search by username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <input type="text" id="user" name="user" value="{{ user_filter }}" placeholder="Search by username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                     <div class="flex-1">
                         <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                        <input type="date" id="date" name="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <input type="date" id="date" name="date" value="{{ date_filter }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                     <div class="flex-none">
                         <button type="submit" class="w-full md:w-auto px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all">
@@ -61,10 +61,10 @@
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            {% if log.action == 'create' %}bg-green-100 text-green-800
-                                            {% elif log.action == 'update' %}bg-blue-100 text-blue-800
-                                            {% elif log.action == 'delete' %}bg-red-100 text-red-800
-                                            {% elif log.action == 'login' %}bg-purple-100 text-purple-800
+                                            {% if log.action_type == 'create' %}bg-green-100 text-green-800
+                                            {% elif log.action_type == 'update' %}bg-blue-100 text-blue-800
+                                            {% elif log.action_type == 'delete' %}bg-red-100 text-red-800
+                                            {% elif log.action_type == 'login' %}bg-purple-100 text-purple-800
                                             {% else %}bg-gray-100 text-gray-800{% endif %}">
                                             {{ log.action }}
                                         </span>
@@ -91,7 +91,7 @@
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="4" class="px-6 py-10 text-center">
+                                    <td colspan="4" class="px-6 py-4 text-center">
                                         <div class="flex flex-col items-center">
                                             <i class="fas fa-search text-gray-300 text-5xl mb-3"></i>
                                             <p class="text-gray-500 text-lg">No audit logs found.</p>
@@ -158,16 +158,19 @@
             </div>
             
             <!-- Export Options -->
-            <div class="mt-6 flex justify-end">
-                <button class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3">
-                    <i class="fas fa-file-csv mr-2"></i>
-                    Export CSV
-                </button>
-                <button class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <i class="fas fa-file-pdf mr-2"></i>
-                    Export PDF
-                </button>
-            </div>
+            <!-- Export Options -->
+<div class="mt-6 flex justify-end">
+    <a href="?export=csv{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3">
+        <i class="fas fa-file-csv mr-2"></i>
+        Export CSV
+    </a>
+    <a href="?export=pdf{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <i class="fas fa-file-pdf mr-2"></i>
+        Export PDF
+    </a>
+</div>
         </div>
     </section>
 {% endblock %}
