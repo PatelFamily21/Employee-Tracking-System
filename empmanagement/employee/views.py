@@ -8,6 +8,7 @@ from .models import Employee, Attendance, Notice, WorkAssignments, Department, R
 from django.utils import timezone
 from django.core.paginator import Paginator
 from datetime import datetime, time
+from itertools import chain
 import csv
 from django.http import HttpResponse
 from django.db.models.functions import TruncMonth
@@ -30,6 +31,60 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Employee, Requests, Notice, Department, LeaveRequest
 from .decorators import role_required
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from .models import AuditLog, PendingRoleChange
+from datetime import datetime
+import csv
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from io import BytesIO
+import os
+from django.conf import settings
+from .decorators import role_required
+
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from .models import AuditLog, PendingRoleChange
+from datetime import datetime
+import csv
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from io import BytesIO
+import os
+from django.conf import settings
+from .decorators import role_required
+
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from .models import AuditLog, PendingRoleChange
+from datetime import datetime
+import csv
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from io import BytesIO
+import os
+from django.conf import settings
+from .decorators import role_required
+
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def dashboard(request):
@@ -92,227 +147,59 @@ def notifications(request):
 
 
 
-@role_required('employee', 'manager', 'hr', 'admin')
 def attendance(request):
     employee = Employee.objects.get(eID=request.user.username)
-    attendance_records = Attendance.objects.filter(eId=employee).order_by('-date')
-
-    # Date filter for history
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    if start_date and end_date:
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-            attendance_records = attendance_records.filter(date__range=[start_date, end_date])
-        except ValueError:
-            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
-            start_date = None
-            end_date = None
-    else:
-        # Default to the last 30 days if no filter is applied
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-        attendance_records = attendance_records.filter(date__range=[start_date, end_date])
-
-    # Get approved leave requests overlapping with the date range
-    leave_requests = LeaveRequest.objects.filter(
-        requester=employee,
-        status='approved',
-        start_date__lte=end_date,
-        end_date__gte=start_date
-    )
-
-    # Create a list of all dates in the range with their status
-    history_data = []
-    current_date = start_date
-    while current_date <= end_date:
-        # Check if there's an attendance record for this date
-        attendance_record = attendance_records.filter(date=current_date).first()
-        if attendance_record:
-            history_data.append({
-                'date': current_date,
-                'status': attendance_record.status,
-                'check_in_time': attendance_record.check_in_time,
-                'check_out_time': attendance_record.check_out_time,
-                'is_leave': False
-            })
-        else:
-            # Check if this date falls within an approved leave request
-            is_leave_day = False
-            for leave_request in leave_requests:
-                if leave_request.start_date <= current_date <= leave_request.end_date:
-                    is_leave_day = True
-                    break
-            history_data.append({
-                'date': current_date,
-                'status': 'leave' if is_leave_day else '—',
-                'check_in_time': None,
-                'check_out_time': None,
-                'is_leave': is_leave_day
-            })
-        current_date += timedelta(days=1)
-
-    # Paginate the combined history data
-    paginator = Paginator(history_data, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
     today = timezone.now().date()
-    is_on_leave_today = LeaveRequest.objects.filter(
-        requester=employee,
-        status='approved',
-        start_date__lte=today,
-        end_date__gte=today
-    ).exists()
-
-    # Calculate summary for the current month
-    current_month_records = Attendance.objects.filter(
-        eId=employee,
-        date__year=today.year,
-        date__month=today.month
-    )
-    leave_requests = LeaveRequest.objects.filter(
-        requester=employee,
-        status='approved',
-        start_date__year__lte=today.year,
-        start_date__month__lte=today.month,
-        end_date__year__gte=today.year,
-        end_date__month__gte=today.month
-    )
-    leave_days = 0
-    for leave_request in leave_requests:
-        start = max(leave_request.start_date, date(today.year, today.month, 1))
-        end_of_month = (date(today.year, today.month + 1, 1) - timedelta(days=1)) if today.month < 12 else date(today.year, 12, 31)
-        end = min(leave_request.end_date, end_of_month)
-        if start <= end:
-            leave_days += (end - start).days + 1
-
-    summary = {
-        'present': current_month_records.filter(status='present').count(),
-        'absent': current_month_records.filter(status='absent').count(),
-        'leave': leave_days,
-    }
+    attendance_record = Attendance.objects.filter(eId=employee, date=today).first()
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        now = timezone.now()
-        today = now.date()
-
-        check_in_start = timezone.make_aware(datetime.combine(today, time(0, 0)))
-        check_in_deadline = timezone.make_aware(datetime.combine(today, time(9, 30)))
-        check_out_start = timezone.make_aware(datetime.combine(today, time(16, 0)))
-        check_out_deadline = timezone.make_aware(datetime.combine(today, time(17, 0)))
-
-        if is_on_leave_today:
-            messages.error(request, "You are on approved leave today and cannot check in or out.")
-            return redirect('attendance')
-
         if action == 'check_in':
-            existing_record = Attendance.objects.filter(eId=employee, date=today).first()
-            if existing_record:
-                messages.warning(request, "You have already checked in today.")
-            elif now < check_in_start or now > check_in_deadline:
-                messages.error(request, "Check-in is only allowed between 00:00 AM and 9:30 AM.")
-            else:
+            if not attendance_record:
                 Attendance.objects.create(
                     eId=employee,
                     date=today,
                     status='present',
-                    check_in_time=now
+                    check_in_time=timezone.now()
                 )
-                if now > timezone.make_aware(datetime.combine(today, time(8, 30))):
-                    messages.warning(request, "Checked in successfully, but you are late (after 8:30 AM).")
-                else:
-                    messages.success(request, "Checked in successfully!")
-        elif action == 'check_out':
-            existing_record = Attendance.objects.filter(eId=employee, date=today).first()
-            if not existing_record:
-                messages.warning(request, "You need to check in before checking out.")
-            elif existing_record.check_out_time:
-                messages.warning(request, "You have already checked out today.")
-            elif now < check_out_start:
-                messages.error(request, "Check-out is only allowed after 4:00 PM.")
-            elif now > check_out_deadline:
-                messages.error(request, "Check-out window closed at 5:00 PM. Contact HR for late check-out.")
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Checked in: {employee.firstName} {employee.lastName}",
+                        performed_by=employee,
+                        details=f"Employee ID: {employee.eID}, Date: {today}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Check-in recorded, but failed to log action: {str(e)}")
+                messages.success(request, "Checked in successfully!")
             else:
-                existing_record.check_out_time = now
-                existing_record.save()
+                messages.error(request, "You have already checked in today.")
+        elif action == 'check_out':
+            if attendance_record and attendance_record.check_in_time and not attendance_record.check_out_time:
+                attendance_record.check_out_time = timezone.now()
+                attendance_record.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Checked out: {employee.firstName} {employee.lastName}",
+                        performed_by=employee,
+                        details=f"Employee ID: {employee.eID}, Date: {today}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Check-out recorded, but failed to log action: {str(e)}")
                 messages.success(request, "Checked out successfully!")
-        elif action == 'leave_request':
-            leave_start_date = request.POST.get('leave_start_date')
-            leave_end_date = request.POST.get('leave_end_date')
-            leave_reason = request.POST.get('leave_reason')
-            try:
-                leave_start_date = datetime.strptime(leave_start_date, '%Y-%m-%d').date()
-                leave_end_date = datetime.strptime(leave_end_date, '%Y-%m-%d').date()
-                if leave_start_date < today:
-                    messages.error(request, "Leave start date cannot be in the past.")
-                elif leave_end_date < leave_start_date:
-                    messages.error(request, "End date cannot be before start date.")
-                else:
-                    overlapping_requests = LeaveRequest.objects.filter(
-                        requester=employee,
-                        start_date__lte=leave_end_date,
-                        end_date__gte=leave_start_date,
-                        status__in=['pending', 'approved']
-                    )
-                    if overlapping_requests.exists():
-                        messages.error(request, "You already have a pending or approved leave request that overlaps with this period.")
-                        return redirect('attendance')
-
-                    request_id = f"LEAVE{employee.eID}{timezone.now().strftime('%Y%m%d%H%M%S')}"
-                    destination_employee = Employee.objects.filter(
-                        department=employee.department,
-                        role='manager'
-                    ).first() or Employee.objects.filter(role='hr').first()
-                    if not destination_employee:
-                        messages.error(request, "No manager or HR found to process your leave request.")
-                        return redirect('attendance')
-                    
-                    leave_request = LeaveRequest.objects.create(
-                        Id=request_id,
-                        requester=employee,
-                        request_message=leave_reason,
-                        request_date=timezone.now(),
-                        destination_employee=destination_employee,
-                        status='pending',
-                        start_date=leave_start_date,
-                        end_date=leave_end_date,
-                    )
-                    messages.success(request, "Leave request submitted successfully!")
-                    view_url = reverse('employee_requests') if destination_employee.role in ['hr', 'admin'] else reverse('viewRequest')
-                    Notification.objects.create(
-                        recipient=destination_employee,
-                        message=f"New leave request from {employee.firstName} {employee.lastName}: {leave_reason[:50]}... <a href='{view_url}' class='text-blue-600 hover:underline'>View</a>",
-                        request_type='leave_request',
-                        request_id=request_id
-                    )
-            except ValueError:
-                messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
-        elif action == 'export_csv':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="attendance_{employee.eID}_{today}.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['Date', 'Status', 'Check-In Time', 'Check-Out Time'])
-            for record in history_data:  # Use history_data instead of attendance_records
-                writer.writerow([
-                    record['date'],
-                    record['status'],
-                    record['check_in_time'].strftime('%Y-%m-%d %H:%M:%S') if record['check_in_time'] else '',
-                    record['check_out_time'].strftime('%Y-%m-d %H:%M:%S') if record['check_out_time'] else '',
-                ])
-            return response
-
+            elif not attendance_record:
+                messages.error(request, "You need to check in first.")
+            else:
+                messages.error(request, "You have already checked out today.")
         return redirect('attendance')
 
     context = {
-        'page_obj': page_obj,
-        'today_record': Attendance.objects.filter(eId=employee, date=today).first(),
-        'summary': summary,
-        'is_on_leave_today': is_on_leave_today,
+        'employee': employee,
+        'attendance_record': attendance_record,
+        'today': today,
     }
-    return render(request, "employee/attendance.html", context)
+    return render(request, 'employee/attendance.html', context)
 
 
 
@@ -407,18 +294,22 @@ def edit_notice(request, id):
     if request.method == 'POST':
         form = NoticeForm(request.POST, instance=notice)
         if form.is_valid():
+            # Capture departments before the update
+            old_departments = list(notice.departments.values_list('name', flat=True))
             form.save()
             employee = get_employee(request)
             if employee:
                 max_title_length = 100 - len("Edited notice: ")
                 truncated_title = notice.title[:max_title_length]
                 action = f"Edited notice: {truncated_title}"
+                new_departments = list(notice.departments.values_list('name', flat=True))
                 try:
                     AuditLog.objects.create(
-                        performed_by=employee,
-                        action_type='update',  # Set the action type
+                        action_type='update',
                         action=action,
-                        timestamp=timezone.now()
+                        performed_by=employee,
+                        timestamp=timezone.now(),
+                        details=f"Notice ID: {notice.Id}, Departments changed from {old_departments} to {new_departments}"
                     )
                 except Exception as e:
                     messages.warning(request, f"Notice updated, but failed to log action: {str(e)}")
@@ -459,6 +350,7 @@ from .context_processors import get_employee  # Import get_employee
 def delete_notice(request, id):
     notice = get_object_or_404(Notice, Id=id)
     notice_title = notice.title
+    notice_id = notice.Id
     notice.delete()
     employee = get_employee(request)
     if employee:
@@ -467,10 +359,11 @@ def delete_notice(request, id):
         action = f"Deleted notice: {truncated_title}"
         try:
             AuditLog.objects.create(
-                performed_by=employee,
-                action_type='delete',  # Set the action type
+                action_type='delete',
                 action=action,
-                timestamp=timezone.now()
+                performed_by=employee,
+                timestamp=timezone.now(),
+                details=f"Notice ID: {notice_id}"
             )
         except Exception as e:
             messages.warning(request, f"Notice deleted, but failed to log action: {str(e)}")
@@ -502,12 +395,14 @@ def create_notice(request):
                 max_title_length = 100 - len("Created notice: ")
                 truncated_title = notice.title[:max_title_length]
                 action = f"Created notice: {truncated_title}"
+                departments = list(notice.departments.values_list('name', flat=True))
                 try:
                     AuditLog.objects.create(
-                        performed_by=employee,
-                        action_type='create',  # Set the action type
+                        action_type='create',
                         action=action,
-                        timestamp=timezone.now()
+                        performed_by=employee,
+                        timestamp=timezone.now(),
+                        details=f"Notice ID: {notice.Id}, Departments: {departments}"
                     )
                 except Exception as e:
                     messages.warning(request, f"Notice created, but failed to log action: {str(e)}")
@@ -562,14 +457,23 @@ def assignwork(request):
                         recipient=tasker_manager,
                         message=f"Approval needed: {assigner.firstName} {assigner.lastName} assigned a task to {tasker.firstName} {tasker.lastName} in your department: {work.work[:50]}... <a href='/ems/managerial-requests/' class='text-blue-600 hover:underline'>View</a>",
                         request_type='managerial_request',
-                        request_id=work.Id  # Link to the WorkAssignments
+                        request_id=work.Id
                     )
             work.save()
+            try:
+                AuditLog.objects.create(
+                    action_type='create',
+                    action=f"Assigned work to {tasker.firstName} {tasker.lastName}",
+                    performed_by=assigner,
+                    details=f"Work ID: {work.Id}, Tasker ID: {tasker.eID}"
+                )
+            except Exception as e:
+                messages.warning(request, f"Work assigned, but failed to log action: {str(e)}")
             Notification.objects.create(
                 recipient=work.taskerId,
                 message=f"New work assigned to you: {work.work[:50]}... <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='work_assignment',
-                request_id=work.Id  # Link to the WorkAssignments
+                request_id=work.Id
             )
             messages.success(request, "Work assigned successfully!")
             return redirect('assignwork')
@@ -600,7 +504,7 @@ def mywork(request):
             return redirect('mywork')
         
         if work.is_locked:
-            messages.error(request, "This task is locked and cannot be updated.")
+            messages.error(request, "This task is locked by the assigner and cannot be updated.")
             return redirect('mywork')
 
         status = request.POST.get('status')
@@ -623,9 +527,9 @@ def mywork(request):
             recipient=work.assignerId,
             message=f"{employee.firstName} {employee.lastName} updated status of {work.work[:50]} to {status}. <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
             request_type='work_update',
-            request_id=work.Id  # Link to the WorkAssignments
+            request_id=work.Id
         )
-        messages.success(request, "Work status, report, and file updated!")
+        messages.success(request, "Work status, report, and file updated successfully!")
         return redirect('mywork')
 
     context = {"work": work_list}
@@ -637,26 +541,40 @@ def workdetails(request, wid):
     workdetails = WorkAssignments.objects.get(Id=wid)
     user = Employee.objects.get(eID=request.user.username)
     can_provide_feedback = (
-        user.role in ['manager', 'admin'] and
+        user.role in ['manager', 'hr', 'admin'] and
         user == workdetails.assignerId and
         not workdetails.is_locked
     )
 
     if request.method == 'POST' and can_provide_feedback:
         feedback = request.POST.get('manager_feedback')
+        feedback_satisfactory = request.POST.get('feedback_satisfactory') == 'on'  # Checkbox value
+
+        # Update the work assignment with feedback and satisfaction status
         workdetails.manager_feedback = feedback
+        workdetails.feedback_satisfactory = feedback_satisfactory
         workdetails.save()
-        # Lock the task if status is completed and feedback is provided
-        if workdetails.status == 'completed' and workdetails.manager_feedback:
+
+        # Lock the task only if status is 'completed', feedback is provided, and feedback is satisfactory
+        if (
+            workdetails.status == 'completed' and
+            workdetails.manager_feedback and
+            workdetails.feedback_satisfactory
+        ):
             workdetails.is_locked = True
             workdetails.save()
+            messages.success(request, "Feedback submitted successfully, and the task has been locked.")
+        else:
+            messages.success(request, "Feedback submitted successfully.")
+
+        # Send notification to the tasker
         Notification.objects.create(
             recipient=workdetails.taskerId,
             message=f"Manager provided feedback on {workdetails.work[:50]}: {feedback[:50]}... <a href='/ems/workdetails/{workdetails.Id}/' class='text-blue-600 hover:underline'>View</a>",
             request_type='work_feedback',
-            request_id=workdetails.Id  # Link to the WorkAssignments
+            request_id=workdetails.Id
         )
-        messages.success(request, "Feedback submitted successfully!")
+
         return redirect('workdetails', wid=wid)
 
     context = {
@@ -740,10 +658,7 @@ from django.core.paginator import Paginator
 @role_required('manager', 'hr', 'admin')
 def viewRequest(request):
     employee = Employee.objects.get(eID=request.user.username)
-    # Show requests directed to this employee
     request_list = Requests.objects.filter(destination_employee=employee).order_by('-request_date')
-
-    # Include leave requests directed to this employee
     leave_requests = LeaveRequest.objects.filter(destination_employee=employee).order_by('-request_date')
 
     paginator = Paginator(list(chain(request_list, leave_requests)), 10)
@@ -753,7 +668,7 @@ def viewRequest(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         request_id = request.POST.get('request_id')
-        request_type = request.POST.get('request_type')  # To distinguish between Requests and LeaveRequest
+        request_type = request.POST.get('request_type')
 
         if request_type == 'leave_request':
             try:
@@ -762,7 +677,6 @@ def viewRequest(request):
                     leave_request.status = 'approved'
                     leave_request.save()
 
-                    # Update Attendance records for the leave period
                     current_date = leave_request.start_date
                     while current_date <= leave_request.end_date:
                         attendance_record = Attendance.objects.filter(
@@ -784,6 +698,15 @@ def viewRequest(request):
                             )
                         current_date += timedelta(days=1)
 
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action=f"Approved leave request {request_id}",
+                            performed_by=employee,
+                            details=f"Leave Request ID: {request_id}, Requester ID: {leave_request.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Leave request approved, but failed to log action: {str(e)}")
                     messages.success(request, f"Leave request {request_id} approved.")
                     Notification.objects.create(
                         recipient=leave_request.requester,
@@ -794,6 +717,15 @@ def viewRequest(request):
                 elif action == 'reject':
                     leave_request.status = 'rejected'
                     leave_request.save()
+                    try:
+                        AuditLog.objects.create(
+                            action_type='other',
+                            action=f"Rejected leave request {request_id}",
+                            performed_by=employee,
+                            details=f"Leave Request ID: {request_id}, Requester ID: {leave_request.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Leave request rejected, but failed to log action: {str(e)}")
                     messages.success(request, f"Leave request {request_id} rejected.")
                     Notification.objects.create(
                         recipient=leave_request.requester,
@@ -808,6 +740,15 @@ def viewRequest(request):
                 req = Requests.objects.get(Id=request_id, destination_employee=employee)
                 if action == 'approve':
                     req.status = 'approved'
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action=f"Approved request {request_id}",
+                            performed_by=employee,
+                            details=f"Request ID: {request_id}, Requester ID: {req.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Request approved, but failed to log action: {str(e)}")
                     messages.success(request, f"Request {request_id} approved.")
                     Notification.objects.create(
                         recipient=req.requester,
@@ -817,6 +758,15 @@ def viewRequest(request):
                     )
                 elif action == 'reject':
                     req.status = 'rejected'
+                    try:
+                        AuditLog.objects.create(
+                            action_type='other',
+                            action=f"Rejected request {request_id}",
+                            performed_by=employee,
+                            details=f"Request ID: {request_id}, Requester ID: {req.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Request rejected, but failed to log action: {str(e)}")
                     messages.success(request, f"Request {request_id} rejected.")
                     Notification.objects.create(
                         recipient=req.requester,
@@ -875,18 +825,28 @@ def requestdetails(request, rid):
 
 
 # Assigned Work List view (restricted to managers and admins)
-@role_required('manager', 'admin')
+@role_required('hr','manager', 'admin')
 def assignedWorkList(request):
     assigner = Employee.objects.get(eID=request.user.username)
     works = WorkAssignments.objects.filter(assignerId=assigner).order_by('-assignDate')
     return render(request, "employee/assignedworklist.html", {"works": works})
 
 # Delete Work view (restricted to managers and admins)
-@role_required('manager', 'admin')
+@role_required('hr','manager', 'admin')
 def deleteWork(request, wid):
     assigner = Employee.objects.get(eID=request.user.username)
     obj = get_object_or_404(WorkAssignments, Id=wid, assignerId=assigner)
+    work_id = obj.Id
     obj.delete()
+    try:
+        AuditLog.objects.create(
+            action_type='delete',
+            action=f"Deleted work assignment {work_id}",
+            performed_by=assigner,
+            details=f"Work ID: {work_id}"
+        )
+    except Exception as e:
+        messages.warning(request, f"Work deleted, but failed to log action: {str(e)}")
     works = WorkAssignments.objects.filter(assignerId=assigner).order_by('-assignDate')
     return render(request, "employee/assignedworklist.html", {"works": works})
 
@@ -905,15 +865,25 @@ def updateWork(request, wid):
         elif assigner.role == 'manager' and tasker.role in ('manager', 'admin'):
             flag = "Managers cannot assign work to managers or admins."
         else:
+            old_tasker = work.taskerId
             form.save()
+            try:
+                AuditLog.objects.create(
+                    action_type='update',
+                    action=f"Updated work assignment {work.Id}",
+                    performed_by=assigner,
+                    details=f"Work ID: {work.Id}, Tasker changed from {old_tasker.eID} to {tasker.eID}"
+                )
+            except Exception as e:
+                messages.warning(request, f"Work updated, but failed to log action: {str(e)}")
             Notification.objects.create(
                 recipient=tasker,
                 message=f"Work updated by {assigner.firstName} {assigner.lastName}: {work.work[:50]}... due {work.dueDate.strftime('%Y-%m-%d')}. <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='work_update',
-                request_id=work.Id  # Link to the WorkAssignments
+                request_id=work.Id
             )
             flag = "Work Updated Successfully!!"
-            return redirect('assignedWorkList')
+            return redirect('assignedworklist')
 
     return render(request, "employee/updatework.html", {'currentWork': work, "filledForm": form, "flag": flag})
 
@@ -943,7 +913,7 @@ def profile(request):
     return render(request, 'employee/profile.html', {'employee': employee})
 
 
-@role_required('hr')
+@role_required('hr', 'admin')
 def hr_dashboard(request):
     # Total number of employees
     total_employees = Employee.objects.count()
@@ -1026,9 +996,8 @@ from django.core.paginator import Paginator
 from .models import LeaveRequest  # Ensure LeaveRequest is imported
 from .decorators import role_required
 
-@role_required('hr')
+@role_required('hr', 'admin')
 def employee_requests(request):
-    # Show all leave requests for HR to manage
     request_list = LeaveRequest.objects.all().order_by('-request_date')
 
     paginator = Paginator(request_list, 10)
@@ -1045,22 +1014,18 @@ def employee_requests(request):
                 leave_request.status = 'approved'
                 leave_request.save()
 
-                # Update Attendance records for the leave period
                 current_date = leave_request.start_date
                 while current_date <= leave_request.end_date:
-                    # Check if an attendance record already exists for this date
                     attendance_record = Attendance.objects.filter(
                         eId=leave_request.requester,
                         date=current_date
                     ).first()
                     if attendance_record:
-                        # Update existing record to 'leave' status
                         attendance_record.status = 'leave'
-                        attendance_record.check_in_time = None  # Clear check-in/out times
+                        attendance_record.check_in_time = None
                         attendance_record.check_out_time = None
                         attendance_record.save()
                     else:
-                        # Create a new attendance record with 'leave' status
                         Attendance.objects.create(
                             eId=leave_request.requester,
                             date=current_date,
@@ -1070,6 +1035,15 @@ def employee_requests(request):
                         )
                     current_date += timedelta(days=1)
 
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Approved leave request {request_id}",
+                        performed_by=employee,
+                        details=f"Leave Request ID: {request_id}, Requester ID: {leave_request.requester.eID}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Leave request approved, but failed to log action: {str(e)}")
                 messages.success(request, f"Leave request {request_id} approved.")
                 Notification.objects.create(
                     recipient=leave_request.requester,
@@ -1080,6 +1054,15 @@ def employee_requests(request):
             elif action == 'reject':
                 leave_request.status = 'rejected'
                 leave_request.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='other',
+                        action=f"Rejected leave request {request_id}",
+                        performed_by=employee,
+                        details=f"Leave Request ID: {request_id}, Requester ID: {leave_request.requester.eID}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Leave request rejected, but failed to log action: {str(e)}")
                 messages.success(request, f"Leave request {request_id} rejected.")
                 Notification.objects.create(
                     recipient=leave_request.requester,
@@ -1139,12 +1122,11 @@ def productivity_dashboard(request):
     return render(request, 'employee/productivity_dashboard.html', context)
 
 
-@role_required('manager', 'admin')
+@role_required('hr','manager', 'admin')
 def approve_work(request, work_id):
     work = get_object_or_404(WorkAssignments, Id=work_id)
     manager = Employee.objects.get(eID=request.user.username)
     
-    # Ensure the manager is from the tasker's department
     if manager.department != work.taskerId.department:
         messages.error(request, "You are not authorized to approve tasks for this department.")
         return redirect('dashboard')
@@ -1153,28 +1135,45 @@ def approve_work(request, work_id):
         action = request.POST.get('action')
         if action == 'approve':
             work.approval_status = 'approved'
+            try:
+                AuditLog.objects.create(
+                    action_type='update',
+                    action=f"Approved work assignment {work.Id}",
+                    performed_by=manager,
+                    details=f"Work ID: {work.Id}, Tasker ID: {work.taskerId.eID}"
+                )
+            except Exception as e:
+                messages.warning(request, f"Work approved, but failed to log action: {str(e)}")
             messages.success(request, "Task approved successfully!")
             Notification.objects.create(
                 recipient=work.assignerId,
                 message=f"Your task assignment to {work.taskerId.firstName} {work.taskerId.lastName} has been approved by {manager.firstName} {manager.lastName}. <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='managerial_request_status',
-                request_id=work.Id  # Link to the WorkAssignments
+                request_id=work.Id
             )
-            # Notify the tasker that the task is now approved and actionable
             Notification.objects.create(
                 recipient=work.taskerId,
                 message=f"Task assigned to you by {work.assignerId.firstName} {work.assignerId.lastName} has been approved: {work.work[:50]}... <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='work_assignment',
-                request_id=work.Id  # Link to the WorkAssignments
+                request_id=work.Id
             )
         elif action == 'reject':
             work.approval_status = 'rejected'
+            try:
+                AuditLog.objects.create(
+                    action_type='other',
+                    action=f"Rejected work assignment {work.Id}",
+                    performed_by=manager,
+                    details=f"Work ID: {work.Id}, Tasker ID: {work.taskerId.eID}"
+                )
+            except Exception as e:
+                messages.warning(request, f"Work rejected, but failed to log action: {str(e)}")
             messages.success(request, "Task rejected.")
             Notification.objects.create(
                 recipient=work.assignerId,
                 message=f"Your task assignment to {work.taskerId.firstName} {work.taskerId.lastName} has been rejected by {manager.firstName} {manager.lastName}. <a href='/ems/workdetails/{work.Id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='managerial_request_status',
-                request_id=work.Id  # Link to the WorkAssignments
+                request_id=work.Id
             )
         work.save()
         return redirect('approve_work', work_id=work_id)
@@ -1184,7 +1183,7 @@ def approve_work(request, work_id):
 
 
 
-@role_required('manager', 'admin')
+@role_required('hr','manager', 'admin')
 def managerial_requests(request):
     manager = Employee.objects.get(eID=request.user.username)
     # Get tasks assigned to employees in the manager's department with approval_status='pending'
@@ -1216,16 +1215,44 @@ from .decorators import role_required
 
 @role_required('hr', 'admin')
 def manage_roles(request):
-    current_user = Employee.objects.get(eID=request.user.username)
+    try:
+        current_user = Employee.objects.get(eID=request.user.username)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee profile not found. Please contact support.")
+        return redirect('dashboard')
 
-    if request.method == "POST" and 'action' not in request.POST:  # Handle role change POST
+    if request.method == "POST":
         employee_id = request.POST.get('employee_id')
-        new_role = request.POST.get('role')
         try:
             employee = Employee.objects.get(eID=employee_id)
             if employee == current_user:
-                messages.error(request, "You cannot modify your own role.")
+                messages.error(request, "You cannot modify your own role or permissions.")
                 return redirect('manage_roles')
+
+            # Handle toggling can_assign_cross_department
+            if 'action' in request.POST and request.POST['action'] == 'toggle_cross_department':
+                new_value = 'can_assign_cross_department' in request.POST and request.POST['can_assign_cross_department'] == 'on'
+                # Only allow setting can_assign_cross_department=True for manager, hr, or admin roles
+                if new_value and employee.role == 'employee':
+                    messages.error(request, f"Cannot enable cross-department assignment for {employee.firstName} {employee.lastName}. Employees with the 'employee' role are not allowed to assign work.")
+                    return redirect('manage_roles')
+                old_value = employee.can_assign_cross_department
+                employee.can_assign_cross_department = new_value
+                employee.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Updated cross-department assignment permission for {employee.firstName} {employee.lastName}",
+                        performed_by=current_user,
+                        details=f"Employee ID: {employee.eID}, From {old_value} to {new_value}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Permission updated, but failed to log action: {str(e)}")
+                messages.success(request, f"Cross-department assignment permission for {employee.firstName} {employee.lastName} updated to {new_value}.")
+                return redirect('manage_roles')
+
+            # Handle role change
+            new_role = request.POST.get('role')
             if employee.role == 'admin' and new_role != 'admin':
                 admin_count = Employee.objects.filter(role='admin').count()
                 if admin_count <= 1:
@@ -1248,8 +1275,17 @@ def manage_roles(request):
                         recipient=reviewer,
                         message=f"Role change request for {employee.firstName} {employee.lastName} from {employee.role} to {new_role} awaits your approval. <a href='/ems/review-role-changes/' class='text-blue-600 hover:underline'>Review</a>",
                         request_type='role_change_request',
-                        request_id=str(pending.id)  # Link to the PendingRoleChange
+                        request_id=str(pending.id)
                     )
+                try:
+                    AuditLog.objects.create(
+                        action_type='create',
+                        action=f"Requested role change for {employee.firstName} {employee.lastName}",
+                        performed_by=current_user,
+                        details=f"Employee ID: {employee.eID}, From {employee.role} to {new_role}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Role change requested, but failed to log action: {str(e)}")
                 messages.success(request, f"Role change request for {employee.firstName} {employee.lastName} to {new_role} submitted for approval.")
             else:
                 RoleChangeLog.objects.create(
@@ -1259,12 +1295,29 @@ def manage_roles(request):
                     changed_by=current_user
                 )
                 employee.role = new_role
+                # Update can_assign_cross_department based on the new role
+                if new_role == 'employee':
+                    employee.can_assign_cross_department = False  # Ensure it's False for 'employee' role
+                else:
+                    # For manager, hr, or admin, retain the current value unless explicitly changed
+                    # If the role is changing to hr or admin, set to True if not already set
+                    if new_role in ['admin', 'hr'] and not employee.can_assign_cross_department:
+                        employee.can_assign_cross_department = True
                 employee.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Changed role of {employee.firstName} {employee.lastName}",
+                        performed_by=current_user,
+                        details=f"Employee ID: {employee.eID}, From {employee.role} to {new_role}, Can Assign Cross-Department: {employee.can_assign_cross_department}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Role changed, but failed to log action: {str(e)}")
                 Notification.objects.create(
                     recipient=employee,
                     message=f"Your role has been updated to {new_role} by {current_user.firstName} {current_user.lastName}.",
                     request_type='role_change',
-                    request_id=None  # No specific request ID for direct changes
+                    request_id=None
                 )
                 if employee.role != 'manager':
                     manager = Employee.objects.filter(department=employee.department, role='manager').first()
@@ -1273,14 +1326,13 @@ def manage_roles(request):
                             recipient=manager,
                             message=f"{employee.firstName} {employee.lastName}'s role changed to {new_role} by {current_user.firstName} {current_user.lastName}.",
                             request_type='role_change',
-                            request_id=None  # No specific request ID for direct changes
+                            request_id=None
                         )
                 messages.success(request, f"Role updated for {employee.firstName} {employee.lastName} to {new_role}.")
         except Employee.DoesNotExist:
             messages.error(request, "Employee not found.")
         return redirect('manage_roles')
 
-    # Filtering logic
     employees = Employee.objects.all().order_by('firstName', 'lastName')
     name_filter = request.GET.get('name', '')
     dept_filter = request.GET.get('department', '')
@@ -1300,7 +1352,7 @@ def manage_roles(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    departments = Department.objects.all()  # For department filter dropdown
+    departments = Department.objects.all()
     return render(request, 'employee/manage_roles.html', {
         'page_obj': page_obj,
         'role_choices': role_choices,
@@ -1312,7 +1364,11 @@ def manage_roles(request):
 
 @role_required('hr', 'admin')
 def review_role_changes(request):
-    current_user = Employee.objects.get(eID=request.user.username)
+    try:
+        current_user = Employee.objects.get(eID=request.user.username)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee profile not found. Please contact support.")
+        return redirect('dashboard')
 
     if request.method == "POST":
         pending_id = request.POST.get('pending_id')
@@ -1320,13 +1376,11 @@ def review_role_changes(request):
         try:
             pending = PendingRoleChange.objects.get(id=pending_id, status='pending')
             
-            # Prevent self-review
             if pending.requested_by == current_user:
                 messages.error(request, "You cannot review your own role change request.")
                 return redirect('review_role_changes')
 
             if action == 'approve':
-                # Apply the role change
                 employee = pending.employee
                 RoleChangeLog.objects.create(
                     employee=employee,
@@ -1335,33 +1389,59 @@ def review_role_changes(request):
                     changed_by=current_user
                 )
                 employee.role = pending.new_role
+                # Update can_assign_cross_department based on the new role
+                if pending.new_role == 'employee':
+                    employee.can_assign_cross_department = False  # Ensure it's False for 'employee' role
+                else:
+                    # For manager, hr, or admin, set to True for hr/admin, retain for manager
+                    if pending.new_role in ['admin', 'hr'] and not employee.can_assign_cross_department:
+                        employee.can_assign_cross_department = True
                 employee.save()
                 pending.status = 'approved'
                 pending.reviewed_by = current_user
                 pending.review_date = timezone.now()
                 pending.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Approved role change for {employee.firstName} {employee.lastName}",
+                        performed_by=current_user,
+                        details=f"Employee ID: {employee.eID}, From {pending.old_role} to {pending.new_role}, Can Assign Cross-Department: {employee.can_assign_cross_department}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Role change approved, but failed to log action: {str(e)}")
                 Notification.objects.create(
                     recipient=employee,
                     message=f"Your role has been updated to {pending.new_role} after approval by {current_user.firstName} {current_user.lastName}.",
                     request_type='role_change',
-                    request_id=None  # No specific request ID for the final change
+                    request_id=None
                 )
                 Notification.objects.create(
                     recipient=pending.requested_by,
                     message=f"Your role change request for {employee.firstName} {employee.lastName} to {pending.new_role} has been approved by {current_user.firstName} {current_user.lastName}. <a href='/ems/role-change-history/' class='text-blue-600 hover:underline'>View History</a>",
                     request_type='role_change_request_status',
-                    request_id=str(pending.id)  # Link to the PendingRoleChange
+                    request_id=str(pending.id)
                 )
+                messages.success(request, f"Role change request for {employee.firstName} {employee.lastName} approved.")
             elif action == 'reject':
                 pending.status = 'rejected'
                 pending.reviewed_by = current_user
                 pending.review_date = timezone.now()
                 pending.save()
+                try:
+                    AuditLog.objects.create(
+                        action_type='other',
+                        action=f"Rejected role change for {pending.employee.firstName} {pending.employee.lastName}",
+                        performed_by=current_user,
+                        details=f"Employee ID: {pending.employee.eID}, From {pending.old_role} to {pending.new_role}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Role change rejected, but failed to log action: {str(e)}")
                 Notification.objects.create(
                     recipient=pending.requested_by,
                     message=f"Your role change request for {pending.employee.firstName} {pending.employee.lastName} to {pending.new_role} has been rejected by {current_user.firstName} {current_user.lastName}. <a href='/ems/review-role-changes/' class='text-blue-600 hover:underline'>View</a>",
                     request_type='role_change_request_status',
-                    request_id=str(pending.id)  # Link to the PendingRoleChange
+                    request_id=str(pending.id)
                 )
                 messages.success(request, f"Role change request for {pending.employee.firstName} {pending.employee.lastName} rejected.")
         except PendingRoleChange.DoesNotExist:
@@ -1394,6 +1474,7 @@ def system_settings(request):
     departments = Department.objects.all()
     if request.method == 'POST':
         action = request.POST.get('action')
+        employee = get_employee(request)
         if action == 'add_department':
             dept_id = request.POST.get('dept_id')
             name = request.POST.get('name')
@@ -1402,10 +1483,30 @@ def system_settings(request):
                 messages.error(request, "Department ID already exists.")
             else:
                 Department.objects.create(dept_id=dept_id, name=name, description=description)
+                if employee:
+                    try:
+                        AuditLog.objects.create(
+                            action_type='create',
+                            action=f"Added department {name}",
+                            performed_by=employee,
+                            details=f"Department ID: {dept_id}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Department added, but failed to log action: {str(e)}")
                 messages.success(request, f"Department {name} added successfully.")
         elif action == 'delete_department':
             dept_id = request.POST.get('dept_id')
             Department.objects.filter(dept_id=dept_id).delete()
+            if employee:
+                try:
+                    AuditLog.objects.create(
+                        action_type='delete',
+                        action=f"Deleted department {dept_id}",
+                        performed_by=employee,
+                        details=f"Department ID: {dept_id}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Department deleted, but failed to log action: {str(e)}")
             messages.success(request, "Department deleted successfully.")
         return redirect('system_settings')
 
@@ -1414,17 +1515,6 @@ def system_settings(request):
         'pending_role_changes_count': PendingRoleChange.objects.filter(status='pending').count(),
     }
     return render(request, 'employee/system_settings.html', context)
-
-from .models import AuditLog
-
-# employee/views.py
-from django.db.models import Q
-
-from django.http import HttpResponse
-import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from io import BytesIO
 
 @role_required('admin')
 def audit_logs(request):
@@ -1468,24 +1558,67 @@ def audit_logs(request):
         return response
     elif export_format == 'pdf':
         buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
-        p.setFont("Helvetica", 12)
-        p.drawString(30, 750, "Audit Logs")
-        y = 730
-        p.setFont("Helvetica", 10)
-        p.drawString(30, y, "Action Type | Action | Performed By | Timestamp | Details")
-        y -= 20
+        doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=0.5*inch, rightMargin=0.5*inch)
+        elements = []
+        styles = getSampleStyleSheet()
+        normal_style = styles['Normal']
+        normal_style.fontSize = 8
+        normal_style.leading = 10
+
+        # Add the logo (adjust the path to your logo file)
+        logo_path = os.path.join(settings.STATIC_ROOT, 'employee', 'logo.png')
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=1*inch, height=1*inch)
+            elements.append(logo)
+        else:
+            elements.append(Paragraph("Employee Tracking System", styles['Title']))
+
+        # Add the title
+        elements.append(Paragraph("Audit Log Report", styles['Title']))
+        elements.append(Spacer(1, 0.2*inch))
+
+        # Prepare table data
+        data = [['Action Type', 'Action', 'Performed By', 'Timestamp', 'Details']]
         for log in logs:
-            if y < 50:
-                p.showPage()
-                p.setFont("Helvetica", 10)
-                y = 750
-            performed_by = str(log.performed_by) if log.performed_by else 'System'
-            line = f"{log.action_type} | {log.action} | {performed_by} | {log.timestamp} | {log.details or '—'}"
-            p.drawString(30, y, line[:100])  # Truncate for PDF
-            y -= 20
-        p.showPage()
-        p.save()
+            performed_by = f"{log.performed_by.firstName} {log.performed_by.lastName}" if log.performed_by else 'System'
+            # Wrap Action Type, Action, and Details columns in Paragraphs to enable text wrapping
+            action_type_paragraph = Paragraph(log.action_type, normal_style)
+            action_paragraph = Paragraph(log.action, normal_style)
+            details_paragraph = Paragraph(log.details or '—', normal_style)
+            data.append([
+                action_type_paragraph,
+                action_paragraph,
+                performed_by,
+                log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                details_paragraph
+            ])
+
+        # Create the table with adjusted column widths
+        table = Table(data, colWidths=[0.8*inch, 1.5*inch, 1.2*inch, 1.3*inch, 2.7*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 1), (-1, -1), 'CENTER'),  # Center all cells except Action Type, Action, and Details
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Left-align the Action Type column
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),  # Left-align the Action column
+            ('ALIGN', (4, 1), (4, -1), 'LEFT'),  # Left-align the Details column
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(table)
+
+        # Build the PDF
+        doc.build(elements)
         buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="audit_logs.pdf"'
@@ -1512,25 +1645,35 @@ def employee_management(request):
     form = EmployeeForm()
     if request.method == 'POST':
         action = request.POST.get('action')
+        employee = get_employee(request)
         if action == 'add':
             form = EmployeeForm(request.POST)
             if form.is_valid():
-                form.save()
-                AuditLog.objects.create(
-                    action="Employee Added",
-                    performed_by=Employee.objects.get(eID=request.user.username),
-                    details=f"Added employee {form.cleaned_data['eID']}"
-                )
+                new_employee = form.save()
+                if employee:
+                    try:
+                        AuditLog.objects.create(
+                            action_type='create',
+                            action="Employee Added",
+                            performed_by=employee,
+                            details=f"Employee ID: {new_employee.eID}, Role: {new_employee.role}, Can Assign Cross-Department: {new_employee.can_assign_cross_department}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Employee added, but failed to log action: {str(e)}")
                 messages.success(request, "Employee added successfully.")
                 return redirect('employee_management')
         elif action == 'delete':
             eID = request.POST.get('eID')
             Employee.objects.filter(eID=eID).delete()
-            AuditLog.objects.create(
-                action="Employee Deleted",
-                performed_by=Employee.objects.get(eID=request.user.username),
-                details=f"Deleted employee {eID}"
-            )
+            if employee:
+                try:
+                    AuditLog.objects.create(
+                        action_type='delete',
+                        action="Employee Deleted",
+                        performed_by=employee
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Employee deleted, but failed to log action: {str(e)}")
             messages.success(request, "Employee deleted successfully.")
             return redirect('employee_management')
 

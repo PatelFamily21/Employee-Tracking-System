@@ -1,65 +1,102 @@
-<!-- employee/notice.html -->
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Notices</h1>
-    <div class="bg-white p-6 rounded-xl shadow-md">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold">All Notices</h2>
-            {% if request.user.employee.role in 'hr,admin' %}
-                <a href="{% url 'create_notice' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
-                    Create Notice
-                </a>
-            {% endif %}
-        </div>
-        {% if page_obj %}
-            <div class="space-y-4">
-                {% for notice in page_obj %}
-                    <div class="border-b pb-3 flex justify-between items-center">
-                        <div>
-                            <p class="font-medium">
-                                {{ notice.title }}
-                                {% if notice.is_urgent %}
-                                    <span class="text-red-600 text-sm ml-2">[Urgent]</span>
-                                {% endif %}
-                            </p>
-                            <p class="text-sm text-gray-500">Posted on: {{ notice.publishDate|date:"Y-m-d H:i" }}</p>
-                            {% if notice.posted_by %}
-                                <p class="text-sm text-gray-500">Posted by: {{ notice.posted_by.firstName }} {{ notice.posted_by.lastName }}</p>
-                            {% endif %}
-                            <p class="text-sm text-gray-500">Viewed by: {{ notice.views.count }} employee(s)</p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <a href="{% url 'noticedetail' id=notice.Id %}" class="text-blue-600 hover:underline">View Details</a>
-                            {% if request.user.employee.role in 'hr,admin' %}
-                                <a href="{% url 'edit_notice' id=notice.Id %}" class="text-green-600 hover:underline">Edit</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-            <!-- Pagination Controls -->
-            {% if page_obj.has_other_pages %}
-                <div class="mt-6 flex justify-between items-center">
-                    <div>
-                        <p class="text-sm text-gray-700">
-                            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
-                        </p>
-                    </div>
-                    <div class="flex space-x-2">
-                        {% if page_obj.has_previous %}
-                            <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Previous</a>
-                        {% endif %}
-                        {% if page_obj.has_next %}
-                            <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Next</a>
-                        {% endif %}
-                    </div>
+    <section class="py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">Notices</h2>
+                <div class="flex space-x-3">
+                    <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </a>
                 </div>
-            {% endif %}
-        {% else %}
-            <p class="text-gray-600">No notices available.</p>
-        {% endif %}
-    </div>
-</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">All Notices</h2>
+                    {% if request.user.employee.role in 'hr,admin' %}
+                        <a href="{% url 'create_notice' %}" class="flex items-center bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all">
+                            <i class="fas fa-plus mr-2"></i>Create Notice
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <div class="p-6">
+                    {% if page_obj %}
+                        <div class="space-y-4">
+                            {% for notice in page_obj %}
+                                <div class="bg-gray-50 p-5 rounded-lg mb-4 border border-gray-200">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="flex items-center">
+                                                <h3 class="font-medium text-gray-800">{{ notice.title }}</h3>
+                                                {% if notice.is_urgent %}
+                                                    <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Urgent</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mt-2 text-sm text-gray-600">
+                                                <div class="flex items-center mb-1">
+                                                    <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
+                                                    <span>Posted on: {{ notice.publishDate|date:"Y-m-d H:i" }}</span>
+                                                </div>
+                                                {% if notice.posted_by %}
+                                                    <div class="flex items-center mb-1">
+                                                        <i class="fas fa-user mr-2 text-gray-500"></i>
+                                                        <span>Posted by: {{ notice.posted_by.firstName }} {{ notice.posted_by.lastName }}</span>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-eye mr-2 text-gray-500"></i>
+                                                    <span>Viewed by: {{ notice.views.count }} employee(s)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{% url 'noticedetail' id=notice.Id %}" class="flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all">
+                                                <i class="fas fa-eye mr-2"></i>View
+                                            </a>
+                                            {% if request.user.employee.role in 'hr,admin' %}
+                                                <a href="{% url 'edit_notice' id=notice.Id %}" class="flex items-center justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 transition-all">
+                                                    <i class="fas fa-edit mr-2"></i>Edit
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Pagination Controls -->
+                        {% if page_obj.has_other_pages %}
+                            <div class="mt-6 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    {% if page_obj.has_previous %}
+                                        <a href="?page={{ page_obj.previous_page_number }}" class="flex items-center justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 transition-all">
+                                            <i class="fas fa-chevron-left mr-2"></i>Previous
+                                        </a>
+                                    {% endif %}
+                                    {% if page_obj.has_next %}
+                                        <a href="?page={{ page_obj.next_page_number }}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all">
+                                            Next<i class="fas fa-chevron-right ml-2"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="p-4 rounded-lg bg-blue-100 text-blue-700 border-l-4 border-blue-500 flex items-center">
+                            <i class="fas fa-info-circle mr-3 text-lg"></i>
+                            No notices available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
 {% endblock %}

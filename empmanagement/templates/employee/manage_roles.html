@@ -81,6 +81,7 @@
                                     <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                                     <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
                                     <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Current Role</th>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept Assign</th>
                                     <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Change Role</th>
                                 </tr>
                             </thead>
@@ -113,6 +114,23 @@
                                                 <span class="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Supervisor</span>
                                             {% else %}
                                                 <span class="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800 font-medium">{{ emp.role|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            {% if emp.role == 'employee' %}
+                                                <span class="text-gray-400" title="Cross-department assignment is not available for employees with the 'employee' role.">
+                                                    <input type="checkbox" disabled class="h-4 w-4 text-gray-300 border-gray-300 rounded">
+                                                </span>
+                                            {% else %}
+                                                <form method="post" onsubmit="return confirm('Are you sure you want to change the cross-department assignment permission for {{ emp.firstName }} {{ emp.lastName }}?');">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="employee_id" value="{{ emp.eID }}">
+                                                    <input type="hidden" name="action" value="toggle_cross_department">
+                                                    <input type="checkbox" name="can_assign_cross_department" 
+                                                           {% if emp.can_assign_cross_department %}checked{% endif %}
+                                                           onchange="this.form.submit()"
+                                                           class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                                </form>
                                             {% endif %}
                                         </td>
                                         <td class="px-6 py-4 text-right text-sm font-medium">

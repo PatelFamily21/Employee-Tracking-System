@@ -1,9 +1,8 @@
 # employee/models.py
-from django.db import models
-from django.db import models
 from django.utils import timezone
 from django.db import models
-from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 designations_opt = (
     ('Team Leader', 'Team Leader'),
@@ -41,6 +40,8 @@ class Department(models.Model):
     def __str__(self):
         return self.name
 
+from django.core.exceptions import ValidationError
+
 class Employee(models.Model):
     eID = models.CharField(primary_key=True, max_length=20)
     firstName = models.CharField(max_length=50)
@@ -54,11 +55,23 @@ class Employee(models.Model):
     salary = models.CharField(max_length=20)
     joinDate = models.DateField()
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="employees")
-    role = models.CharField(max_length=20, choices=role_choices, default='employee')  # New role field
+    role = models.CharField(max_length=20, choices=role_choices, default='employee')
+    can_assign_cross_department = models.BooleanField(
+        default=False,
+        help_text="Indicates whether this employee can assign tasks to employees in other departments."
+    )
+
+    def clean(self):
+        # Ensure can_assign_cross_department is False if role is 'employee'
+        if self.role == 'employee' and self.can_assign_cross_department:
+            raise ValidationError({
+                'can_assign_cross_department': "Employees with the 'employee' role cannot assign tasks across departments."
+            })
 
     def save(self, *args, **kwargs):
-        # Only set role based on designation if this is a new instance
+        # Only set role and can_assign_cross_department if this is a new instance
         if self.pk is None:  # Check if this is a creation (not an update)
+            # Set role based on designation
             if self.designation == 'HR':
                 self.role = 'hr'
             elif self.designation == 'Admin':
@@ -67,6 +80,15 @@ class Employee(models.Model):
                 self.role = 'manager'
             else:
                 self.role = 'employee'
+
+            # Set can_assign_cross_department based on role
+            if self.role in ['admin', 'hr']:
+                self.can_assign_cross_department = True
+            else:
+                self.can_assign_cross_department = False
+
+        # Run validation before saving
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -119,6 +141,10 @@ class NoticeView(models.Model):
     class Meta:
         unique_together = ('notice', 'employee')  # Prevent duplicate views
 
+# employee/models.py
+from django.db import models
+from django.utils import timezone
+
 class WorkAssignments(models.Model):
     Id = models.CharField(primary_key=True, max_length=20)
     assignerId = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name="assigned_works")
@@ -138,6 +164,7 @@ class WorkAssignments(models.Model):
     progress_report = models.TextField(blank=True, null=True)
     progress_file = models.FileField(upload_to='work_files/', blank=True, null=True)
     manager_feedback = models.TextField(blank=True, null=True)
+    feedback_satisfactory = models.BooleanField(default=False)  # New field
     is_locked = models.BooleanField(default=False)
     approval_status = models.CharField(
         max_length=20,
@@ -150,7 +177,7 @@ class WorkAssignments(models.Model):
     )
 
     def __str__(self):
-        return f"{self.Id} - {work[:50]}"
+        return f"{self.Id} - {self.work[:50]}"
 
 
 class Requests(models.Model):
@@ -262,6 +289,7 @@ class PendingRoleChange(models.Model):
     
 
 # employee/models.py
+# employee/models.py
 class AuditLog(models.Model):
     ACTION_TYPES = [
         ('create', 'Create'),
@@ -271,8 +299,8 @@ class AuditLog(models.Model):
         ('other', 'Other'),
     ]
     
-    action_type = models.CharField(max_length=20, choices=ACTION_TYPES, default='other')  # New field for action type
-    action = models.CharField(max_length=100)  # Detailed description
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES, default='other')
+    action = models.CharField(max_length=100)
     performed_by = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.TextField(blank=True, null=True)

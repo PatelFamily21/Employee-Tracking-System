@@ -1,30 +1,122 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="py-8">
-    <div class="max-w-md mx-auto p-4 bg-white rounded-lg shadow-md">
-        <h3 class="text-xl font-bold mb-4">Request Details</h3>
-        <p><b>Request ID:</b> {{ requestdetail.Id }}</p>
-        <p><b>Requested By:</b> {{ requestdetail.requester }}</p>
-        <p><b>Request To:</b> {{ requestdetail.destination_employee }}</p>
-        <p><b>Request Type:</b>
-            {% if requestdetail.request_type == 'resource' %}Resource Request
-            {% elif requestdetail.request_type == 'support' %}Support Request
-            {% elif requestdetail.request_type == 'approval' %}Approval Request
-            {% else %}Other Request{% endif %}
-        </p>
-        <p><b>Request Message:</b> {{ requestdetail.request_message }}</p>
-        <p><b>Request Date:</b> {{ requestdetail.request_date|date:"Y-m-d H:i" }}</p>
-        <p><b>Status:</b> <span class="{% if requestdetail.status == 'pending' %}text-yellow-600{% elif requestdetail.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ requestdetail.status|title }}</span></p>
-        <p><b>Last Updated:</b> {{ requestdetail.updated_at|date:"Y-m-d H:i" }}</p>
-        {% if can_process %}
-            <form method="post" class="mt-4">
-                {% csrf_token %}
-                <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mr-2">Approve</button>
-                <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Reject</button>
-            </form>
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Request Details</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'viewRequest' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+                </a>
+            </div>
+        </div>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
-        <a href="{% url 'viewRequest' %}" class="mt-4 inline-block text-blue-600 hover:underline">Back to Requests</a>
+        
+        <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Request #{{ requestdetail.Id }}</h2>
+            </div>
+            
+            <div class="p-6">
+                <!-- Request Information Card -->
+                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Basic Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Requested By:</span>
+                            <span class="text-gray-700">{{ requestdetail.requester }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Request To:</span>
+                            <span class="text-gray-700">{{ requestdetail.destination_employee }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Request Type:</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if requestdetail.request_type == 'resource' %}bg-blue-100 text-blue-800
+                                {% elif requestdetail.request_type == 'support' %}bg-purple-100 text-purple-800
+                                {% elif requestdetail.request_type == 'approval' %}bg-green-100 text-green-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if requestdetail.request_type == 'resource' %}
+                                    <i class="fas fa-cube mr-1"></i> Resource Request
+                                {% elif requestdetail.request_type == 'support' %}
+                                    <i class="fas fa-headset mr-1"></i> Support Request
+                                {% elif requestdetail.request_type == 'approval' %}
+                                    <i class="fas fa-check-circle mr-1"></i> Approval Request
+                                {% else %}
+                                    <i class="fas fa-question-circle mr-1"></i> Other Request
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Status:</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if requestdetail.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                {% elif requestdetail.status == 'approved' %}bg-green-100 text-green-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {% if requestdetail.status == 'pending' %}
+                                    <i class="fas fa-clock mr-1"></i>
+                                {% elif requestdetail.status == 'approved' %}
+                                    <i class="fas fa-check mr-1"></i>
+                                {% else %}
+                                    <i class="fas fa-times mr-1"></i>
+                                {% endif %}
+                                {{ requestdetail.status|title }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Card -->
+                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Timeline</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Request Date:</span>
+                            <span class="text-gray-700">{{ requestdetail.request_date|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Last Updated:</span>
+                            <span class="text-gray-700">{{ requestdetail.updated_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Message Card -->
+                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Request Message</h3>
+                    <div class="p-4 bg-white rounded border border-gray-200">
+                        <p class="text-gray-700">{{ requestdetail.request_message }}</p>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                {% if can_process %}
+                    <form method="post" class="mt-6">
+                        {% csrf_token %}
+                        <div class="flex">
+                            <button type="submit" name="action" value="approve" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all mr-4">
+                                <i class="fas fa-check mr-2"></i>Approve Request
+                            </button>
+                            <button type="submit" name="action" value="reject" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
+                                <i class="fas fa-times mr-2"></i>Reject Request
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}

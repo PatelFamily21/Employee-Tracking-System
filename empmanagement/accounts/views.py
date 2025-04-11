@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from employee.models import Employee
+from employee.models import Employee, AuditLog  # Import AuditLog
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.utils import timezone
 
 # Create your views here.
 def landing_page(request):
@@ -16,6 +17,25 @@ def login_user(request):
         user = authenticate(request, username=id, password=password)
         if user is not None:
             login(request, user)
+            # Log the login action
+            try:
+                employee = Employee.objects.get(eID=user.username)
+                AuditLog.objects.create(
+                    action_type='login',
+                    action=f"User logged in: {employee.firstName} {employee.lastName}",
+                    performed_by=employee,
+                    timestamp=timezone.now(),
+                    details=f"Employee ID: {employee.eID}"
+                )
+            except Employee.DoesNotExist:
+                messages.warning(request, "Employee profile not found, login logged without employee details.")
+                AuditLog.objects.create(
+                    action_type='login',
+                    action=f"User logged in: {id}",
+                    performed_by=None,
+                    timestamp=timezone.now(),
+                    details=f"Username: {id}"
+                )
             # Check employee's role and redirect accordingly
             try:
                 employee = Employee.objects.get(eID=user.username)
@@ -29,12 +49,38 @@ def login_user(request):
                 messages.error(request, "Employee profile not found.")
                 return redirect("/ems/dashboard")
         else:
+            # Log failed login attempt
+            AuditLog.objects.create(
+                action_type='other',
+                action="Failed login attempt",
+                performed_by=None,
+                timestamp=timezone.now(),
+                details=f"Username: {id}"
+            )
             messages.error(request, "Invalid Credentials")
             return redirect("/")
 
     return render(request, "employee/login.html")
 
 def logout_user(request):
+    # Log the logout action
+    try:
+        employee = Employee.objects.get(eID=request.user.username)
+        AuditLog.objects.create(
+            action_type='other',
+            action=f"User logged out: {employee.firstName} {employee.lastName}",
+            performed_by=employee,
+            timestamp=timezone.now(),
+            details=f"Employee ID: {employee.eID}"
+        )
+    except Employee.DoesNotExist:
+        AuditLog.objects.create(
+            action_type='other',
+            action=f"User logged out: {request.user.username}",
+            performed_by=None,
+            timestamp=timezone.now(),
+            details=f"Username: {request.user.username}"
+        )
     logout(request)
     return redirect("/")
 
@@ -52,10 +98,24 @@ def signup(request):
                 else:
                     user = User.objects.create_user(username=id, password=password)
                     user.save()
-                    # Optionally set initial role here if needed
-                    # employee = Employee.objects.get(eID=id)
-                    # employee.role = 'employee'  # Already default in model, so not strictly necessary
-                    # employee.save()
+                    # Log the signup action
+                    try:
+                        employee = Employee.objects.get(eID=id)
+                        AuditLog.objects.create(
+                            action_type='create',
+                            action=f"User signed up: {employee.firstName} {employee.lastName}",
+                            performed_by=employee,
+                            timestamp=timezone.now(),
+                            details=f"Employee ID: {employee.eID}"
+                        )
+                    except Employee.DoesNotExist:
+                        AuditLog.objects.create(
+                            action_type='create',
+                            action=f"User signed up: {id}",
+                            performed_by=None,
+                            timestamp=timezone.now(),
+                            details=f"Username: {id}"
+                        )
                     messages.success(request, "Registered Successfully! Please log in.")
                     return redirect("login_user")
             else:

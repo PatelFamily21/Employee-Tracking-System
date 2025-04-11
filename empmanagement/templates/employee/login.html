@@ -51,19 +51,6 @@
                         </div>
                     </div>
                     
-                    {% if messages %}
-                        <div class="mb-4 p-4 rounded-lg bg-red-100 text-red-700 border-l-4 border-red-500">
-                            <div class="flex">
-                                <i class="fas fa-exclamation-circle mr-3 text-lg"></i>
-                                <div>
-                                    {% for msg in messages %}
-                                        {{ msg }}        
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                    
                     <button type="submit" 
                             class="w-full flex items-center justify-center py-3 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                         <i class="fas fa-sign-in-alt mr-2"></i>Sign In

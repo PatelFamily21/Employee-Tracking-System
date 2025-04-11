@@ -84,10 +84,49 @@ class makeRequestForm(forms.ModelForm):
                 self.fields['destination_employee'].queryset = Employee.objects.filter(role='manager')
 
 
+from django import forms
+from employee.models import Employee, Department
+
 class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
-        fields = ['eID', 'firstName', 'middleName', 'lastName', 'phoneNo', 'email', 'addharNo', 'dOB', 'designation', 'salary', 'joinDate', 'department']
+        fields = [
+            'eID', 'firstName', 'middleName', 'lastName', 'phoneNo', 'email',
+            'addharNo', 'dOB', 'designation', 'salary', 'joinDate',
+            'department', 'can_assign_cross_department'
+        ]
+        widgets = {
+            'dOB': forms.DateInput(attrs={'type': 'text'}),
+            'joinDate': forms.DateInput(attrs={'type': 'text'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get('role')
+        can_assign_cross_department = cleaned_data.get('can_assign_cross_department', False)
+
+        # If role is not explicitly set in the form, it will be set by the model's save method
+        # We need to infer the role from the designation to perform validation
+        designation = cleaned_data.get('designation')
+        if designation:
+            if designation == 'HR':
+                inferred_role = 'hr'
+            elif designation == 'Admin':
+                inferred_role = 'admin'
+            elif designation in ['Project Manager', 'Team Leader']:
+                inferred_role = 'manager'
+            else:
+                inferred_role = 'employee'
+        else:
+            inferred_role = 'employee'  # Default role if designation is not set
+
+        # Validate that can_assign_cross_department cannot be True for 'employee' role
+        if inferred_role == 'employee' and can_assign_cross_department:
+            raise forms.ValidationError({
+                'can_assign_cross_department': "Employees with the 'employee' role cannot assign tasks across departments."
+            })
+
+        return cleaned_data
 
 
 # employee/forms.py

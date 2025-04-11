@@ -7,6 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Management System</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -25,7 +26,6 @@
             height: 100vh;
             position: fixed;
             z-index: 40;
-            
         }
         
         .sidebar-item {
@@ -178,13 +178,17 @@
                     <span class="sidebar-tooltip">Notices</span>
                 </div>
                 
-
                 <!-- Manager/Admin Items -->
-                {% if employee.role == 'manager' or employee.role == 'admin' %}
+                {% if employee.role == 'manager' or employee.role == 'admin' or employee.role == 'hr' %}
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/assignwork' %}active{% endif %}">
                         <i class="fas fa-briefcase mr-3 text-gray-500"></i>
                         <a href="{% url 'assignwork' %}" class="text-sm truncate sidebar-text">Assign Work</a>
                         <span class="sidebar-tooltip">Assign Work</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/mywork' %}active{% endif %}">
+                        <i class="fas fa-tasks mr-3 text-gray-500"></i>
+                        <a href="{% url 'mywork' %}" class="text-sm truncate sidebar-text">My Work</a>
+                        <span class="sidebar-tooltip">My Work</span>
                     </div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/editAW' %}active{% endif %}">
                         <i class="fas fa-edit mr-3 text-gray-500"></i>
@@ -209,7 +213,7 @@
                 <!-- HR/Admin Items -->
                 {% if employee.role == 'hr' or employee.role == 'admin' %}
                     <div class="mt-4 mb-2 px-3">
-                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">HR Controls</div>
                     </div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/hr-dashboard' %}active{% endif %}">
                         <i class="fas fa-briefcase mr-3 text-gray-500"></i>
@@ -251,6 +255,13 @@
                         <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
                         <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Requests</a>
                         <span class="sidebar-tooltip">Employee Requests</span>
+                    </div>
+                {% endif %}
+
+                <!-- Admin-Only Items -->
+                {% if employee.role == 'admin' %}
+                    <div class="mt-4 mb-2 px-3">
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
                     </div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-management' %}active{% endif %}">
                         <i class="fas fa-user-friends mr-3 text-gray-500"></i>
@@ -431,7 +442,7 @@
                 
                 // Handle window resize
                 function handleResize() {
-                    if (window.innerWidth < 768) {
+                    if (window.innerWidth < 768px) {
                         sidebar.classList.remove('open');
                         mobileOverlay.classList.remove('active');
                         mainContent.style.marginLeft = '0';
@@ -457,7 +468,7 @@
                         }
                         
                         // Close mobile sidebar after click
-                        if (window.innerWidth < 768) {
+                        if (window.innerWidth < 768px) {
                             sidebar.classList.remove('open');
                             mobileOverlay.classList.remove('active');
                         }
