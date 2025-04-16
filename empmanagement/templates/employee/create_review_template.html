@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Create Performance Review Template</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'manage_review_templates' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Templates
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Template Builder</h2>
+            </div>
+            
+            <div class="p-6">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Template Details -->
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Template Details</h3>
+                        <div class="space-y-4">
+                            {{ template_form.as_p }}
+                        </div>
+                    </div>
+
+                    <!-- Questions Section -->
+                    <div class="mt-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Questions</h3>
+                        {{ formset.management_form }}
+                        <div id="question-forms" class="space-y-4">
+                            {% for form in formset %}
+                            <div class="question-form bg-gray-50 p-5 rounded-lg border border-gray-200 relative">
+                                <button type="button" class="delete-question absolute top-4 right-4 text-red-600 hover:text-red-800 transition-all">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <div class="space-y-4">
+                                    {{ form.as_p }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="button" id="add-question" class="mt-6 flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                            <i class="fas fa-plus mr-2"></i>Add Another Question
+                        </button>
+                    </div>
+
+                    <div class="flex mt-8">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                            <i class="fas fa-save mr-2"></i>Create Template
+                        </button>
+                        <a href="{% url 'manage_review_templates' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.getElementById('add-question').addEventListener('click', function() {
+    const formContainer = document.getElementById('question-forms');
+    const totalForms = document.querySelector('#id_form-TOTAL_FORMS');
+    const formIndex = parseInt(totalForms.value);
+
+    // Clone the first form as a template
+    const firstForm = document.querySelector('.question-form').cloneNode(true);
+    firstForm.innerHTML = firstForm.innerHTML.replace(/form-\d+/g, `form-${formIndex}`);
+
+    // Update form field names and IDs
+    firstForm.querySelectorAll('input, select, textarea').forEach(input => {
+        if (input.name) {
+            input.name = input.name.replace(/form-\d+/, `form-${formIndex}`);
+        }
+        if (input.id) {
+            input.id = input.id.replace(/form-\d+/, `form-${formIndex}`);
+        }
+        // Clear the input values
+        input.value = input.type === 'number' ? '0' : '';
+    });
+
+    formContainer.appendChild(firstForm);
+    totalForms.value = formIndex + 1;
+
+    // Reattach delete event listeners to the new form
+    attachDeleteListeners();
+});
+
+// Function to attach delete event listeners to all delete buttons
+function attachDeleteListeners() {
+    const deleteButtons = document.querySelectorAll('.delete-question');
+    deleteButtons.forEach(button => {
+        button.removeEventListener('click', handleDelete); // Remove existing listeners to avoid duplicates
+        button.addEventListener('click', handleDelete);
+    });
+}
+
+// Function to handle deletion of a question form
+function handleDelete(event) {
+    const formContainer = document.getElementById('question-forms');
+    const totalForms = document.querySelector('#id_form-TOTAL_FORMS');
+    const formCount = formContainer.children.length;
+
+    if (formCount > 1) { // Ensure at least one form remains
+        event.target.closest('.question-form').remove();
+        totalForms.value = parseInt(totalForms.value) - 1;
+
+        // Reindex remaining forms
+        const remainingForms = formContainer.querySelectorAll('.question-form');
+        remainingForms.forEach((form, index) => {
+            form.querySelectorAll('input, select, textarea').forEach(input => {
+                if (input.name) {
+                    input.name = input.name.replace(/form-\d+/, `form-${index}`);
+                }
+                if (input.id) {
+                    input.id = input.id.replace(/form-\d+/, `form-${index}`);
+                }
+            });
+        });
+    } else {
+        alert("You must have at least one question in the template.");
+    }
+}
+
+// Attach delete listeners on page load
+document.addEventListener('DOMContentLoaded', attachDeleteListeners);
+</script>
+{% endblock %}

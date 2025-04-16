@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Schedule Performance Review</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Review Details</h2>
+            </div>
+            
+            <div class="p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Recipient Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="{{ form.department.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                {{ form.department }}
+                                {% if form.department.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ form.department.help_text }}</p>
+                                {% endif %}
+                                {% if form.department.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.department.errors }}</p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.employee.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Employee (Optional)</label>
+                                {{ form.employee }}
+                                {% if form.employee.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ form.employee.help_text }}</p>
+                                {% endif %}
+                                {% if form.employee.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.employee.errors }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Review Configuration</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="{{ form.template.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                                {{ form.template }}
+                                {% if form.template.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ form.template.help_text }}</p>
+                                {% endif %}
+                                {% if form.template.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.template.errors }}</p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.scheduled_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Scheduled Date</label>
+                                {{ form.scheduled_date }}
+                                {% if form.scheduled_date.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ form.scheduled_date.help_text }}</p>
+                                {% endif %}
+                                {% if form.scheduled_date.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.scheduled_date.errors }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4 pt-4">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i class="fas fa-calendar-check mr-2"></i>Schedule Review
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deptEmployeeMap = {{ dept_employee_map|safe }};
+    const departmentSelect = document.getElementById('id_department');
+    const employeeSelect = document.getElementById('id_employee');
+
+    function updateEmployeeOptions() {
+        const deptId = departmentSelect.value || "0"; // Use "0" for "All Departments"
+        const employees = deptEmployeeMap[deptId] || [];
+
+        // Show a loading state
+        employeeSelect.innerHTML = '<option value="">Loading...</option>';
+        employeeSelect.disabled = true;
+
+        // Simulate a brief delay to ensure the UI updates (optional, can remove if not needed)
+        setTimeout(() => {
+            // Clear existing options and repopulate
+            employeeSelect.innerHTML = '<option value="">---------</option>';
+            employees.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.eID; // Use eID instead of id
+                option.textContent = `${employee.firstName} ${employee.lastName}`;
+                employeeSelect.appendChild(option);
+            });
+            employeeSelect.disabled = false;
+        }, 100); // Small delay for visual feedback
+    }
+
+    // Initial update
+    updateEmployeeOptions();
+
+    // Update on department change
+    departmentSelect.addEventListener('change', updateEmployeeOptions);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Custom Report Builder</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Report Configuration</h2>
+            </div>
+            
+            <div class="p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                            {{ form.model|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fields to Display</label>
+                            {{ form.fields|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date Field for Filtering</label>
+                            {{ form.date_field|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                            {{ form.start_date|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                            {{ form.end_date|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status Field for Filtering</label>
+                            {{ form.status_field|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status Value</label>
+                            {{ form.status_value|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Aggregation</label>
+                            {{ form.aggregation|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Field to Aggregate</label>
+                            {{ form.aggregation_field|safe }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Department</label>
+                            {{ form.department|safe }}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <div class="flex items-center">
+                            <label class="flex items-center text-sm font-medium text-gray-700">
+                                {{ form.is_urgent|safe }}
+                                <span class="ml-2">Urgent Notices Only</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <label class="flex items-center text-sm font-medium text-gray-700">
+                                {{ form.feedback_satisfactory|safe }}
+                                <span class="ml-2">Satisfactory Feedback Only</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i class="fas fa-chart-bar mr-2"></i>Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Report Results</h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6 flex flex-wrap gap-3">
+                    <a href="{% url 'custom_report_builder' %}?export=csv" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                        <i class="fas fa-file-csv mr-2"></i>Export as CSV
+                    </a>
+                    <a href="{% url 'custom_report_builder' %}?export_pdf=1" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                        <i class="fas fa-file-pdf mr-2"></i>Export as PDF
+                    </a>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                {% for header in headers %}
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">{{ header }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for row in results %}
+                            <tr class="hover:bg-gray-50 transition-all">
+                                {% for field in row.values %}
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ field }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="{{ headers|length }}" class="px-6 py-12 text-center text-gray-500">
+                                    No data found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if aggregation_result %}
+                <div class="mt-8 bg-gray-50 p-5 rounded-lg border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Aggregation Results</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for key, value in aggregation_result.items %}
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">{{ key }}:</span>
+                            <span class="text-gray-700">{{ value|floatformat:2 }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<style>
+    .hidden { display: none; }
+</style>
+{% endblock %}

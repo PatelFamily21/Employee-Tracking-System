@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Submitted Performance Reviews</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Review Submissions</h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Employee</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Scheduled Date</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Template</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Status</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for review in reviews %}
+                                <tr class="hover:bg-gray-50 transition-all">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ review.employee }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ review.scheduled_date }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ review.template }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                        {% if review.status == 'completed' %}bg-green-100 text-green-800
+                                        {% elif review.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                            {{ review.status|title }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <a href="{% url 'performance_review_detail' review.id %}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                                            <i class="fas fa-eye mr-1"></i>View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                        <i class="fas fa-clipboard-list text-gray-400 text-3xl mb-3"></i>
+                                        <p>No submitted reviews found.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

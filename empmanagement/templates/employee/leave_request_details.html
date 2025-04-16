@@ -1,4 +1,3 @@
-<!-- employee/leave_request_details.html -->
 {% extends 'base.html' %}
 
 {% block content %}
@@ -44,6 +43,10 @@
             <div>
                 <p class="text-sm text-gray-600">End Date:</p>
                 <p class="text-gray-900">{{ leave_request.end_date }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Compulsory Leave:</p>
+                <p class="text-gray-900">{{ leave_request.is_compulsory|yesno:"Yes,No" }}</p>
             </div>
         </div>
         <div class="mt-4">

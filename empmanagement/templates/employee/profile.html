@@ -1,106 +1,233 @@
 {% extends 'base.html' %}
-
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">My Profile</h2>
-                <div class="flex space-x-3">
-                    <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </a>
-                </div>
-            </div>
-
-            {% if messages %}
-                <div class="mb-6">
-                    {% for message in messages %}
-                        <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
-                            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-            
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Profile Information</h2>
-                </div>
-                
-                <div class="p-6">
-                    <!-- Employee Details Card -->
-                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
-                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Employee Details</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Employee ID:</span>
-                                <span class="text-gray-700">{{ employee.eID }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Designation:</span>
-                                <span class="text-gray-700">{{ employee.designation }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Department:</span>
-                                <span class="text-gray-700">{{ employee.department.name|default:"None" }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Join Date:</span>
-                                <span class="text-gray-700">{{ employee.joinDate }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Profile Form -->
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                            <div>
-                                <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                                <input type="text" id="firstName" name="firstName" value="{{ employee.firstName }}" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            </div>
-                            
-                            <div>
-                                <label for="middleName" class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
-                                <input type="text" id="middleName" name="middleName" value="{{ employee.middleName }}" 
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                            <input type="text" id="lastName" name="lastName" value="{{ employee.lastName }}" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <label for="phoneNo" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                <input type="text" id="phoneNo" name="phoneNo" value="{{ employee.phoneNo }}" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            </div>
-                            
-                            <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                <input type="email" id="email" name="email" value="{{ employee.email }}" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            </div>
-                        </div>
-                        
-                        <div class="flex mt-6">
-                            <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                                <i class="fas fa-save mr-2"></i>Update Profile
-                            </button>
-                            <a href="{% url 'dashboard' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                                Cancel
-                            </a>
-                        </div>
-                    </form>
-                </div>
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">My Profile</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
             </div>
         </div>
-    </section>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Profile Information</h2>
+            </div>
+            
+            <div class="p-6">
+                <!-- Employee Details Card -->
+                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Employee Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Employee ID:</span>
+                            <span class="text-gray-700">{{ employee.eID }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Designation:</span>
+                            <span class="text-gray-700">{{ employee.designation }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Department:</span>
+                            <span class="text-gray-700">{{ employee.department.name|default:"None" }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">Join Date:</span>
+                            <span class="text-gray-700">{{ employee.joinDate }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Form -->
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Update Profile</h3>
+                <form method="post" name="profile_form">
+                    {% csrf_token %}
+                    <input type="hidden" name="update_profile" value="1">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                        <div>
+                            <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                            <input type="text" id="firstName" name="firstName" value="{{ employee.firstName }}" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="middleName" class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                            <input type="text" id="middleName" name="middleName" value="{{ employee.middleName }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                        <input type="text" id="lastName" name="lastName" value="{{ employee.lastName }}" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label for="phoneNo" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="text" id="phoneNo" name="phoneNo" value="{{ employee.phoneNo }}" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" id="email" name="email" value="{{ employee.email }}" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div class="flex mt-6">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i class="fas fa-save mr-2"></i>Update Profile
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Emergency Contacts -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Emergency Contacts</h3>
+                    <form method="post" class="mb-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="add_emergency_contact" value="1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for field in emergency_form %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-plus mr-2"></i>Add Contact
+                        </button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Name</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Relationship</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Phone</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Email</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                {% for contact in employee.emergency_contacts.all %}
+                                    <tr class="hover:bg-gray-50 transition-all">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.relationship }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.phone_no }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.email|default:"—" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                            No emergency contacts found.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Documents -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Documents</h3>
+                    <form method="post" enctype="multipart/form-data" class="mb-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="add_document" value="1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for field in document_form %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-upload mr-2"></i>Upload Document
+                        </button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Title</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Type</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Uploaded At</th>
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                {% for doc in employee.documents.all %}
+                                    <tr class="hover:bg-gray-50 transition-all">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.title }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.get_document_type_display }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            <a href="{{ doc.file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                                <i class="fas fa-download mr-1"></i>Download
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                            No documents found.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Password Change Form -->
+                <h3 class="text-lg font-semibold text-gray-800 mt-8 mb-4">Change Password</h3>
+                <form method="post" name="password_form">
+                    {% csrf_token %}
+                    <input type="hidden" name="change_password" value="1">
+                    <div class="mb-5">
+                        <label for="id_old_password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <input type="password" name="old_password" id="id_old_password" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <div class="mb-5">
+                        <label for="id_new_password1" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" name="new_password1" id="id_new_password1" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <div class="mb-5">
+                        <label for="id_new_password2" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" name="new_password2" id="id_new_password2" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <button type="submit"
+                            class="w-full flex items-center justify-center py-3 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                        Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

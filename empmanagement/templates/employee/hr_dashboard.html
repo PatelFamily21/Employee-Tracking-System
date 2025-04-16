@@ -22,6 +22,9 @@
             </div>
             <p class="text-3xl font-bold text-blue-600">{{ total_employees }}</p>
             <p class="text-sm text-gray-500 mt-1">Active team members</p>
+            <a href="{% url 'employee_database' %}" class="text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block">
+                View Database
+            </a>
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
             <div class="flex items-center mb-3">

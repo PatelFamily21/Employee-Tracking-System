@@ -1,0 +1,164 @@
+<!-- employee/employee_database.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Centralized Employee Database</h1>
+        <a href="{% url 'hr_dashboard' %}" class="text-blue-600 hover:text-blue-800 flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to HR Dashboard
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                    <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <form method="get" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+        <div class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label for="department_id" class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Department</label>
+                <select id="department_id" name="department_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.dept_id }}" {% if selected_department_id == dept.dept_id %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label for="role" class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Role</label>
+                <select id="role" name="role" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">All Roles</option>
+                    {% for role_value, role_name in role_choices %}
+                        <option value="{{ role_value }}" {% if selected_role == role_value %}selected{% endif %}>
+                            {{ role_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label for="status" class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</label>
+                <select id="status" name="status" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">All Statuses</option>
+                    {% for status_value, status_name in status_choices %}
+                        <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center">
+                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Export Button -->
+    <div class="mb-6">
+        <a href="{% url 'export_employee_data' %}?{% if selected_department_id %}department_id={{ selected_department_id }}&{% endif %}{% if selected_role %}role={{ selected_role }}&{% endif %}{% if selected_status %}status={{ selected_status }}{% endif %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all flex items-center">
+            <i class="fas fa-download mr-2"></i> Export to PDF
+        </a>
+    </div>
+
+    <!-- Employee Table -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">EID</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Name</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Department</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Role</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Email</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Phone</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Status</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for emp in page_obj %}
+                        <tr class="hover:bg-gray-50 transition-all">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.eID }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.firstName }} {{ emp.lastName }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.department.name|default:"—" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.get_role_display }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.email }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.phoneNo }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {% if emp.is_active and not emp.is_archived %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                {% elif emp.is_archived %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Archived</span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <a href="{% url 'employee_detail' eID=emp.eID %}" class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-eye mr-1"></i> View Details
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-gray-500">
+                                    <i class="fas fa-users-slash text-2xl mb-2"></i>
+                                    <p>No employees found for selected criteria</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <div class="mt-6 bg-gray-50 border border-gray-100 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ page_obj.paginator.count }}</span> entries
+                    </p>
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if selected_department_id %}&department_id={{ selected_department_id }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if selected_department_id %}&department_id={{ selected_department_id }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-angle-left mr-1"></i> Previous
+                        </a>
+                    {% endif %}
+                    <span class="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md text-sm font-medium text-blue-700">
+                        {{ page_obj.number }}
+                    </span>
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if selected_department_id %}&department_id={{ selected_department_id }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Next <i class="fas fa-angle-right ml-1"></i>
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_department_id %}&department_id={{ selected_department_id }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

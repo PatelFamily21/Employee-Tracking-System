@@ -1,82 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <section class="py-10 bg-gray-50">
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Employee Management</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Add Employee Form -->
         <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Employee Management</h2>
-                <div class="flex space-x-3">
-                    <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </a>
+            <!-- Form section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+                <!-- Form header -->
+                <div class="bg-indigo-600 text-white px-6 py-4">
+                    <h2 class="text-xl font-semibold">Add New Employee</h2>
+                </div>
+                
+                <!-- Form body -->
+                <div class="p-6">
+                    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            {% if field.name == 'can_assign_cross_department' %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
+                                    <div class="flex items-center">
+                                        {{ field }}
+                                        <span class="ml-2 text-sm text-gray-500">Allow cross-department task assignment</span>
+                                    </div>
+                                    {% if field.errors %}
+                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        <div class="md:col-span-2">
+                            <button type="submit" name="action" value="add" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                <i class="fas fa-user-plus mr-2"></i>Add Employee
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-
-            <!-- Messages -->
-            {% if messages %}
-                <div class="mb-6">
-                    {% for message in messages %}
-                        <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% else %}bg-red-100 text-red-700 border-l-4 border-red-500{% endif %}">
-                            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% else %}fas fa-exclamation-circle{% endif %} mr-3 text-lg"></i>
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Add Employee Form -->
-            <div class="max-w-6xl mx-auto px-4">
-                <!-- Form section -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-                    <!-- Form header -->
-                    <div class="bg-indigo-600 text-white px-6 py-4">
-                        <h2 class="text-xl font-semibold">Add New Employee</h2>
-                    </div>
-                    
-                    <!-- Form body -->
-                    <div class="p-6">
-                        <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {% csrf_token %}
-                            {% for field in form %}
-                                {% if field.name == 'can_assign_cross_department' %}
-                                    <div>
-                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
-                                        <div class="flex items-center">
-                                            {{ field }}
-                                            <span class="ml-2 text-sm text-gray-500">Allow cross-department task assignment</span>
-                                        </div>
-                                        {% if field.errors %}
-                                            <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
-                                        {% endif %}
-                                    </div>
-                                {% else %}
-                                    <div>
-                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
-                                        {% if field.name == 'dOB' or field.name == 'joinDate' %}
-                                            <div class="relative">
-                                                {{ field }}
-                                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                                                    <i class="fas fa-calendar-alt text-gray-400"></i>
-                                                </div>
-                                            </div>
-                                        {% else %}
-                                            {{ field }}
-                                        {% endif %}
-                                        {% if field.errors %}
-                                            <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                            <div class="md:col-span-2">
-                                <button type="submit" name="action" value="add" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                                    <i class="fas fa-user-plus mr-2"></i>Add Employee
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
 
             <!-- Employee List -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -94,6 +83,10 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept Assign</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signup Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archived</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -110,10 +103,69 @@
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">No</span>
                                             {% endif %}
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {% if emp.has_completed_signup %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Registered</span>
+                                            {% else %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending Signup</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {% if emp.is_active %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                            {% else %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {% if emp.is_archived %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Yes ({{ emp.archived_at|date:"Y-m-d" }})</span>
+                                            {% else %}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">No</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            <div class="flex space-x-2">
+                                                {% if emp.is_active %}
+                                                    <form method="post" class="inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="eID" value="{{ emp.eID }}">
+                                                        <button type="submit" name="action" value="deactivate" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
+                                                            <i class="fas fa-user-slash mr-1"></i>Deactivate
+                                                        </button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="post" class="inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="eID" value="{{ emp.eID }}">
+                                                        <button type="submit" name="action" value="activate" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                                                            <i class="fas fa-user-check mr-1"></i>Activate
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                {% if emp.is_archived %}
+                                                    <form method="post" class="inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="eID" value="{{ emp.eID }}">
+                                                        <button type="submit" name="action" value="unarchive" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                                                            <i class="fas fa-box-open mr-1"></i>Unarchive
+                                                        </button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="post" class="inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="eID" value="{{ emp.eID }}">
+                                                        <button type="submit" name="action" value="archive" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all">
+                                                            <i class="fas fa-archive mr-1"></i>Archive
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                        <td colspan="9" class="px-6 py-4 text-center text-gray-500">
                                             <div class="flex items-center justify-center">
                                                 <i class="fas fa-user-slash mr-2"></i>No employees found.
                                             </div>
@@ -133,9 +185,15 @@
             // Apply styles to all form inputs
             const allInputs = document.querySelectorAll('form input, form select, form textarea');
             allInputs.forEach(input => {
-                if (input.type !== 'checkbox') {
+                if (input.type !== 'checkbox' && input.type !== 'date') {
                     input.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
                 }
+            });
+
+            // Style date inputs
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(input => {
+                input.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
             });
 
             // Style the checkbox
@@ -143,18 +201,6 @@
             if (checkbox) {
                 checkbox.classList.add('h-4', 'w-4', 'text-indigo-600', 'border-gray-300', 'rounded', 'focus:ring-indigo-500');
             }
-            
-            // Initialize flatpickr for date fields
-            flatpickr('input[name="dOB"]', {
-                dateFormat: 'Y-m-d',
-                allowInput: true,
-                maxDate: new Date() // Prevents future dates for DOB
-            });
-            
-            flatpickr('input[name="joinDate"]', {
-                dateFormat: 'Y-m-d',
-                allowInput: true
-            });
 
             // Dynamically enable/disable the can_assign_cross_department checkbox based on designation
             const designationSelect = document.querySelector('select[name="designation"]');

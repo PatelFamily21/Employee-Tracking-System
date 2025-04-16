@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Leave Requests</h1>
+
+    <!-- Leave Request Form -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4">Submit a Leave Request</h2>
+        <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% csrf_token %}
+            <div>
+                <label for="leave_start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" id="leave_start_date" name="leave_start_date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="leave_end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" id="leave_end_date" name="leave_end_date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="md:col-span-2">
+                <label for="leave_reason" class="block text-sm font-medium text-gray-700">Reason</label>
+                <textarea id="leave_reason" name="leave_reason" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+            </div>
+            <div class="md:col-span-2">
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                    Submit Leave Request
+                </button>
+            </div>
+        </form>
+        {% if messages %}
+            <div class="mt-4">
+                {% for message in messages %}
+                    <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Leave Request History -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Your Leave Request History</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Request ID</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Start Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">End Date</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Reason</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Status</th>
+                        <th class="text-sm font-medium text-gray-900 px-6 py-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in page_obj %}
+                        <tr class="border-b transition duration-300 ease-in-out hover:bg-gray-100">
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.Id }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.start_date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.end_date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                {{ request.request_message }}
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                <span class="{% if request.status == 'pending' %}text-yellow-600{% elif request.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ request.status|capfirst }}
+                                </span>
+                            </td>
+                            <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                <a href="{% url 'leave_request_details' rid=request.Id %}" class="text-blue-600 hover:underline">View</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-sm text-gray-900 font-light px-6 py-4 text-center">
+                                No leave requests found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+            <div class="mt-6 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                    </p>
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Previous</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

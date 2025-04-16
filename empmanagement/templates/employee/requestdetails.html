@@ -25,7 +25,7 @@
         
         <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
             <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Request #{{ requestdetail.Id }}</h2>
+                <h2 class="text-xl font-semibold">Request #{{ requestdetail.Id }}{% if requestdetail.is_locked %} (Locked){% endif %}</h2>
             </div>
             
             <div class="p-6">
@@ -100,20 +100,110 @@
                         <p class="text-gray-700">{{ requestdetail.request_message }}</p>
                     </div>
                 </div>
-                
-                <!-- Action Buttons -->
-                {% if can_process %}
-                    <form method="post" class="mt-6">
-                        {% csrf_token %}
-                        <div class="flex">
-                            <button type="submit" name="action" value="approve" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all mr-4">
-                                <i class="fas fa-check mr-2"></i>Approve Request
-                            </button>
-                            <button type="submit" name="action" value="reject" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
-                                <i class="fas fa-times mr-2"></i>Reject Request
-                            </button>
+
+                <!-- File Attachment Card -->
+                {% if requestdetail.request_file %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Attached File</h3>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">File:</span>
+                            <a href="{{ requestdetail.request_file.url }}" class="text-blue-600 hover:underline" download>
+                                <i class="fas fa-download mr-2"></i>{{ requestdetail.request_file.name|cut:"request_files/" }}
+                            </a>
                         </div>
-                    </form>
+                    </div>
+                {% endif %}
+
+                <!-- Feedback Card -->
+                {% if requestdetail.feedback %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Feedback</h3>
+                        <div class="p-4 bg-white rounded border border-gray-200">
+                            <p class="text-gray-700">{{ requestdetail.feedback }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Requester Feedback Card -->
+                {% if requestdetail.requester_feedback %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Response Feedback</h3>
+                        <div class="p-4 bg-white rounded border border-gray-200">
+                            <p class="text-gray-700">{{ requestdetail.requester_feedback }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Response File Card -->
+                {% if requestdetail.response_file %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Response File</h3>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-600 w-32">File:</span>
+                            <a href="{{ requestdetail.response_file.url }}" class="text-blue-600 hover:underline" download>
+                                <i class="fas fa-download mr-2"></i>{{ requestdetail.response_file.name|cut:"request_response_files/" }}
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Feedback Submission (for Recipient) -->
+                {% if can_process %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Provide Feedback</h3>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <textarea name="feedback" rows="4" class="w-full p-2 border rounded-md" placeholder="Provide feedback or seek clarification"></textarea>
+                            </div>
+                            <div class="flex space-x-4">
+                                <button type="submit" name="action" value="feedback" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                                    <i class="fas fa-comment mr-2"></i>Submit Feedback
+                                </button>
+                                <button type="submit" name="action" value="approve" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                                    <i class="fas fa-check mr-2"></i>Approve Request
+                                </button>
+                                <button type="submit" name="action" value="reject" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
+                                    <i class="fas fa-times mr-2"></i>Reject Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% endif %}
+
+                <!-- Response Submission (for Requester) -->
+                {% if can_respond %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Respond to Feedback</h3>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <label for="requester_feedback" class="block text-sm font-medium text-gray-700">Feedback</label>
+                                <textarea name="requester_feedback" id="requester_feedback" rows="4" class="w-full p-2 border rounded-md" placeholder="Provide your feedback here"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label for="response_file" class="block text-sm font-medium text-gray-700">Attach File (Optional)</label>
+                                <input type="file" name="response_file" id="response_file" class="w-full p-2 border rounded-md">
+                            </div>
+                            <button type="submit" name="action" value="respond" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                <i class="fas fa-upload mr-2"></i>Submit Response
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+
+                <!-- Lock Request (for Requester) -->
+                {% if can_lock %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Lock Request</h3>
+                        <form method="post">
+                            {% csrf_token %}
+                            <p class="text-gray-700 mb-4">If you are satisfied with the feedback, you can lock this request to mark it as resolved.</p>
+                            <button type="submit" name="action" value="lock" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                <i class="fas fa-lock mr-2"></i>Lock Request
+                            </button>
+                        </form>
+                    </div>
                 {% endif %}
             </div>
         </div>

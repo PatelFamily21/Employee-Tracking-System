@@ -1,90 +1,73 @@
 # employee/views.py
-from django.shortcuts import redirect, render, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count
-from .forms import workform, makeRequestForm, EmployeeForm 
-from .models import Employee, Attendance, Notice, WorkAssignments, Department, Requests, Notification, WorkAssignmentLog, NoticeView
-from django.utils import timezone
-from django.core.paginator import Paginator
-from datetime import datetime, time
-from itertools import chain
+
+# Standard library imports
+from datetime import date, datetime, time, timedelta
+from collections import defaultdict
+from io import BytesIO
 import csv
-from django.http import HttpResponse
+import os
+
+# Third-party imports (Django)
+from django.apps import apps
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db.models import Avg, Count, F, Q
 from django.db.models.functions import TruncMonth
-from .decorators import role_required
-from datetime import timedelta
-from datetime import datetime, time, timezone, timedelta, date
-# employee/views.py
-from django.shortcuts import redirect, render
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from .models import Employee, Attendance, LeaveRequest, Notification  # Add LeaveRequest and Notification
+from django.forms import formset_factory
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.core.paginator import Paginator
-from datetime import datetime, time
-import csv
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.db.models import Q
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from .models import Employee, Requests, Notice, Department, LeaveRequest
-from .decorators import role_required
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q
-from .models import AuditLog, PendingRoleChange
-from datetime import datetime
-import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-from io import BytesIO
-import os
-from django.conf import settings
-from .decorators import role_required
+from django.utils.timezone import make_naive
 
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q
-from .models import AuditLog, PendingRoleChange
-from datetime import datetime
-import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet
+# Third-party imports (reportlab)
 from reportlab.lib import colors
-from reportlab.lib.units import inch
-from io import BytesIO
-import os
-from django.conf import settings
-from .decorators import role_required
-
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q
-from .models import AuditLog, PendingRoleChange
-from datetime import datetime
-import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
 from reportlab.lib.units import inch
-from io import BytesIO
-import os
-from django.conf import settings
-from .decorators import role_required
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 
+# Local application imports
+from .context_processors import get_employee
+from .decorators import role_required
+from .forms import (
+    CustomReportForm,
+    DocumentForm,
+    EmergencyContactForm,
+    EmployeeForm,
+    makeRequestForm,
+    NoticeForm,
+    PerformanceReviewTemplateForm,
+    ReviewQuestionForm,
+    workform,
+)
+from .models import (
+    Attendance,
+    AuditLog,
+    Department,
+    Document,
+    EmergencyContact,
+    Employee,
+    LeaveRequest,
+    Notice,
+    NoticeView,
+    Notification,
+    PendingRoleChange,
+    PerformanceReview,
+    PerformanceReviewTemplate,
+    Requests,
+    ReviewQuestion,
+    ReviewResponse,
+    RoleChangeLog,
+    WorkAssignments,
+    WorkAssignmentLog,
+    role_choices,
+)
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def dashboard(request):
@@ -146,21 +129,97 @@ def notifications(request):
     return render(request, 'employee/notifications.html', context)
 
 
-
+@role_required('employee', 'manager', 'hr', 'admin')
 def attendance(request):
     employee = Employee.objects.get(eID=request.user.username)
     today = timezone.now().date()
+    current_time = timezone.now()  # Timezone-aware datetime in EAT (Africa/Nairobi)
+    
+    # Define time windows in EAT
+    check_in_start = time(0, 0)    # 00:00
+    check_in_end = time(9, 30)     # 09:30
+    check_out_start = time(16, 0)  # 16:00
+    check_out_end = time(17, 0)    # 17:00
+    
+    # Get current time components
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    current_time_of_day = time(current_hour, current_minute)
+    
+    # Check if employee is on approved leave today
+    is_on_leave_today = LeaveRequest.objects.filter(
+        requester=employee,
+        start_date__lte=today,
+        end_date__gte=today,
+        status='approved'
+    ).exists()
+    
+    # Get today's attendance record for the current employee
     attendance_record = Attendance.objects.filter(eId=employee, date=today).first()
-
+    
+    # Initialize selected_employee_id as None
+    selected_employee_id = None
+    employees = None
+    
+    # Determine attendance history based on role
+    if employee.role in ['hr', 'admin']:
+        # HR and admin can see all employees' attendance
+        attendance_history = Attendance.objects.all().order_by('-date')
+        employees = Employee.objects.all()  # For filtering by employee
+        # Filter by employee if selected
+        selected_employee_id = request.GET.get('employee_id')
+        if selected_employee_id:
+            attendance_history = attendance_history.filter(eId__eID=selected_employee_id)
+    else:
+        # Employees and managers see only their own history
+        attendance_history = Attendance.objects.filter(eId=employee).order_by('-date')
+    
+    # Date filter for attendance history
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    if start_date and end_date:
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            attendance_history = attendance_history.filter(date__range=[start_date, end_date])
+        except ValueError:
+            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+    
+    # Paginate attendance history
+    paginator = Paginator(attendance_history, 10)  # 10 records per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Calculate monthly summary for the current employee
+    current_month = today.month
+    current_year = today.year
+    monthly_records = Attendance.objects.filter(
+        eId=employee,
+        date__year=current_year,
+        date__month=current_month
+    )
+    summary = {
+        'present': monthly_records.filter(status='present').count(),
+        'absent': monthly_records.filter(status='absent').count(),
+        'leave': monthly_records.filter(status='leave').count(),
+    }
+    
     if request.method == 'POST':
         action = request.POST.get('action')
+        
         if action == 'check_in':
-            if not attendance_record:
+            if is_on_leave_today:
+                messages.error(request, "You are on approved leave today and cannot check in.")
+            elif attendance_record:
+                messages.error(request, "You have already checked in today.")
+            elif not (check_in_start <= current_time_of_day <= check_in_end):
+                messages.error(request, "Check-in is only allowed between 00:00 and 09:30 EAT.")
+            else:
                 Attendance.objects.create(
                     eId=employee,
                     date=today,
                     status='present',
-                    check_in_time=timezone.now()
+                    check_in_time=current_time
                 )
                 try:
                     AuditLog.objects.create(
@@ -172,11 +231,18 @@ def attendance(request):
                 except Exception as e:
                     messages.warning(request, f"Check-in recorded, but failed to log action: {str(e)}")
                 messages.success(request, "Checked in successfully!")
-            else:
-                messages.error(request, "You have already checked in today.")
+        
         elif action == 'check_out':
-            if attendance_record and attendance_record.check_in_time and not attendance_record.check_out_time:
-                attendance_record.check_out_time = timezone.now()
+            if is_on_leave_today:
+                messages.error(request, "You are on approved leave today and cannot check out.")
+            elif not attendance_record:
+                messages.error(request, "You need to check in first.")
+            elif attendance_record.check_out_time:
+                messages.error(request, "You have already checked out today.")
+            elif not (check_out_start <= current_time_of_day <= check_out_end):
+                messages.error(request, "Check-out is only allowed between 16:00 and 17:00 EAT.")
+            else:
+                attendance_record.check_out_time = current_time
                 attendance_record.save()
                 try:
                     AuditLog.objects.create(
@@ -188,26 +254,36 @@ def attendance(request):
                 except Exception as e:
                     messages.warning(request, f"Check-out recorded, but failed to log action: {str(e)}")
                 messages.success(request, "Checked out successfully!")
-            elif not attendance_record:
-                messages.error(request, "You need to check in first.")
-            else:
-                messages.error(request, "You have already checked out today.")
+        
+        elif action == 'export_csv':
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="attendance_history_{employee.eID}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['Employee ID', 'Date', 'Status', 'Check-In Time', 'Check-Out Time'])
+            for record in attendance_history:
+                writer.writerow([
+                    record.eId.eID,
+                    record.date,
+                    record.status,
+                    record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_in_time else '—',
+                    record.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_out_time else '—'
+                ])
+            return response
+        
         return redirect('attendance')
-
+    
     context = {
         'employee': employee,
         'attendance_record': attendance_record,
         'today': today,
+        'is_on_leave_today': is_on_leave_today,
+        'page_obj': page_obj,
+        'summary': summary,
+        'employees': employees,
+        'selected_employee_id': selected_employee_id,
     }
     return render(request, 'employee/attendance.html', context)
 
-
-
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.db.models import Q
-from django.shortcuts import redirect
-from django.contrib import messages
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def notice(request):
@@ -255,14 +331,14 @@ def notice(request):
     return render(request, "employee/notice.html", context)
     
 
-# Notice detail view (accessible to all authenticated employees)
-# employee/views.py
-from django.shortcuts import get_object_or_404
-from django.http import Http404
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def noticedetail(request, id):
-    employee = Employee.objects.get(eID=request.user.username)
+    try:
+        employee = Employee.objects.get(eID=request.user.username)
+    except Employee.DoesNotExist:
+        raise Http404("Employee profile not found.")
+
     notice = get_object_or_404(Notice, Id=id)
 
     # Check if the employee can view the notice
@@ -276,17 +352,12 @@ def noticedetail(request, id):
         raise Http404("You do not have permission to view this notice or it is no longer available.")
 
     # Mark the notice as viewed
-    if not NoticeView.objects.filter(notice=notice, employee=employee).exists():
-        NoticeView.objects.create(notice=notice, employee=employee)
+    NoticeView.objects.get_or_create(notice=notice, employee=employee)
 
     context = {
-        'noticedetail': notice,  # Keep the context variable name consistent with your template
+        'noticedetail': notice,
     }
     return render(request, "employee/noticedetail.html", context)
-
-# employee/views.py
-# employee/views.py
-from .forms import NoticeForm  # Ensure NoticeForm is imported
 
 @role_required('hr', 'admin')
 def edit_notice(request, id):
@@ -326,25 +397,6 @@ def edit_notice(request, id):
     }
     return render(request, 'employee/notice_form.html', context)
 
-# employee/views.py
-# employee/views.py
-from .models import AuditLog
-
-# employee/views.py
-from django.shortcuts import redirect, render, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from .decorators import role_required
-from .models import Notice, AuditLog
-from .context_processors import get_employee  # Import get_employee
-
-# employee/views.py
-from django.shortcuts import redirect, render, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from .decorators import role_required
-from .models import Notice, AuditLog
-from .context_processors import get_employee  # Import get_employee
 
 @role_required('hr', 'admin')
 def delete_notice(request, id):
@@ -373,11 +425,6 @@ def delete_notice(request, id):
     messages.success(request, "Notice deleted successfully!")
     return redirect('manage_notices')
 
-
-# employee/views.py
-from django.shortcuts import redirect
-from django.contrib import messages
-from .forms import NoticeForm  # We'll create this form next
 
 @role_required('hr', 'admin')
 def create_notice(request):
@@ -431,9 +478,6 @@ def create_notice(request):
     return render(request, 'employee/notice_form.html', context)
 
 
-
-# Assign Work view (restricted to managers and admins)
-
 @role_required('manager', 'hr', 'admin')
 def assignwork(request):
     assigner = Employee.objects.get(eID=request.user.username)
@@ -486,8 +530,6 @@ def assignwork(request):
         }
         form = workform(initial=initial_data, request=request)
     return render(request, 'employee/workassign.html', {'form': form})
-# My Work view (accessible to all authenticated employees)
-# employee/views.py
 
 
 @role_required('employee', 'manager', 'hr', 'admin')
@@ -535,7 +577,7 @@ def mywork(request):
     context = {"work": work_list}
     return render(request, "employee/mywork.html", context)
 
-# Work Details view (accessible to all authenticated employees)
+
 @role_required('employee', 'manager', 'hr', 'admin')
 def workdetails(request, wid):
     workdetails = WorkAssignments.objects.get(Id=wid)
@@ -591,56 +633,46 @@ def makeRequest(request):
     flag = ""
 
     if request.method == 'POST':
-        form = makeRequestForm(request.POST)
+        form = makeRequestForm(request.POST, request.FILES, request=request)
         if form.is_valid():
             # Create the request
             request_obj = form.save(commit=False)
             request_obj.Id = f"REQ{timezone.now().strftime('%Y%m%d%H%M%S')}"
             request_obj.requester = employee
             request_obj.status = 'pending'
-
-            # Determine the destination_employee based on the requester's role
-            if employee.role == 'employee':
-                # Non-manager employees: Direct to their department's manager
-                destination_employee = Employee.objects.filter(
-                    department=employee.department,
-                    role='manager'
-                ).first()
-            elif employee.role == 'manager':
-                # Managers: Direct to HR
-                destination_employee = Employee.objects.filter(role='hr').first()
-            elif employee.role == 'hr':
-                # HR: Direct to an Admin
-                destination_employee = Employee.objects.filter(role='admin').first()
-            else:  # employee.role == 'admin'
-                # Admins: Direct to another Admin (or self if no other Admin exists)
-                destination_employee = Employee.objects.filter(role='admin').exclude(eID=employee.eID).first()
-                if not destination_employee:
-                    destination_employee = employee  # Self-directed if no other Admin
-
-            if not destination_employee:
-                messages.error(request, "No suitable recipient found for this request.")
-                return redirect('makeRequest')
-
-            request_obj.destination_employee = destination_employee
             request_obj.save()
 
             # Send a notification to the destination employee
-            view_url = '/ems/viewRequest/' if destination_employee.role in ['manager', 'hr', 'admin'] else '/ems/requestdetails/{request_obj.Id}/'
+            destination_employee = request_obj.destination_employee
+            view_url = f"/ems/requestdetails/{request_obj.Id}/"
             Notification.objects.create(
                 recipient=destination_employee,
                 message=f"New request from {employee.firstName} {employee.lastName}: {request_obj.request_message[:50]}... <a href='{view_url}' class='text-blue-600 hover:underline'>View</a>",
                 request_type='general_request',
-                request_id=request_obj.Id  # Link to the Requests
+                request_id=request_obj.Id
             )
+
+            # Log the action
+            try:
+                AuditLog.objects.create(
+                    action_type='create',
+                    action="Request Created",
+                    performed_by=employee,
+                    details=f"Request ID: {request_obj.Id}, Recipient: {destination_employee.eID}"
+                )
+            except Exception as e:
+                messages.warning(request, f"Request submitted, but failed to log action: {str(e)}")
 
             flag = "Request Submitted"
             messages.success(request, "Request submitted successfully!")
             return redirect('makeRequest')
         else:
-            messages.error(request, "Please correct the errors below.")
+            # Display form errors to the user
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}" if field != '__all__' else error)
     else:
-        form = makeRequestForm(initial={'request_type': 'other'})
+        form = makeRequestForm(request=request, initial={'request_type': 'other'})
 
     # Display the user's existing requests
     user_requests = Requests.objects.filter(requester=employee).order_by('-request_date')
@@ -652,8 +684,6 @@ def makeRequest(request):
     })
 
 
-# View Requests view (accessible to all authenticated employees)
-from django.core.paginator import Paginator
 
 @role_required('manager', 'hr', 'admin')
 def viewRequest(request):
@@ -669,6 +699,7 @@ def viewRequest(request):
         action = request.POST.get('action')
         request_id = request.POST.get('request_id')
         request_type = request.POST.get('request_type')
+        feedback = request.POST.get('feedback', '')
 
         if request_type == 'leave_request':
             try:
@@ -740,6 +771,9 @@ def viewRequest(request):
                 req = Requests.objects.get(Id=request_id, destination_employee=employee)
                 if action == 'approve':
                     req.status = 'approved'
+                    if feedback:
+                        req.feedback = feedback
+                    req.save()
                     try:
                         AuditLog.objects.create(
                             action_type='update',
@@ -758,6 +792,8 @@ def viewRequest(request):
                     )
                 elif action == 'reject':
                     req.status = 'rejected'
+                    req.feedback = None  # Clear feedback on rejection
+                    req.save()
                     try:
                         AuditLog.objects.create(
                             action_type='other',
@@ -774,7 +810,19 @@ def viewRequest(request):
                         request_type='general_request_status',
                         request_id=req.Id
                     )
-                req.save()
+                elif action == 'feedback':
+                    if not feedback:
+                        messages.error(request, "Feedback is required when seeking clarification.")
+                    else:
+                        req.feedback = feedback
+                        req.save()
+                        messages.success(request, "Feedback submitted successfully.")
+                        Notification.objects.create(
+                            recipient=req.requester,
+                            message=f"{employee.firstName} {employee.lastName} has provided feedback on your request (ID: {req.Id}): {feedback[:50]}... <a href='/ems/requestdetails/{req.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                            request_type='general_request_feedback',
+                            request_id=req.Id
+                        )
             except Requests.DoesNotExist:
                 messages.error(request, "Request not found.")
         return redirect('viewRequest')
@@ -784,7 +832,7 @@ def viewRequest(request):
     }
     return render(request, 'employee/viewRequest.html', context)
 
-# Request Details view (accessible to all authenticated employees)
+
 @role_required('employee', 'manager', 'hr', 'admin')
 def requestdetails(request, rid):
     requestdetail = get_object_or_404(Requests, Id=rid)
@@ -795,43 +843,184 @@ def requestdetails(request, rid):
         messages.error(request, "You are not authorized to view this request.")
         return redirect('dashboard')
 
-    if request.method == 'POST' and requestdetail.destination_employee == employee:
+    if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'approve':
-            requestdetail.status = 'approved'
-            messages.success(request, "Request approved successfully!")
-            Notification.objects.create(
-                recipient=requestdetail.requester,
-                message=f"Your request (ID: {requestdetail.Id}) has been approved by {employee.firstName} {employee.lastName}. <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>",
-                request_type='general_request_status',
-                request_id=requestdetail.Id  # Link to the Requests
-            )
-        elif action == 'reject':
-            requestdetail.status = 'rejected'
-            messages.success(request, "Request rejected successfully!")
-            Notification.objects.create(
-                recipient=requestdetail.requester,
-                message=f"Your request (ID: {requestdetail.Id}) has been rejected by {employee.firstName} {employee.lastName}. <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>",
-                request_type='general_request_status',
-                request_id=requestdetail.Id  # Link to the Requests
-            )
-        requestdetail.save()
-        return redirect('viewRequest')
+        feedback = request.POST.get('feedback', '').strip()
+
+        if requestdetail.destination_employee == employee:
+            # Actions for the recipient
+            if action == 'approve':
+                if requestdetail.status != 'pending':
+                    messages.error(request, "This request has already been processed.")
+                else:
+                    requestdetail.status = 'approved'
+                    if feedback:
+                        requestdetail.feedback = feedback
+                    requestdetail.save()
+                    messages.success(request, "Request approved successfully!")
+                    Notification.objects.create(
+                        recipient=requestdetail.requester,
+                        message=f"Your request (ID: {requestdetail.Id}) has been approved by {employee.firstName} {employee.lastName}. <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                        request_type='general_request_status',
+                        request_id=requestdetail.Id
+                    )
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action=f"Approved request {requestdetail.Id}",
+                            performed_by=employee,
+                            details=f"Request ID: {requestdetail.Id}, Requester ID: {requestdetail.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Request approved, but failed to log action: {str(e)}")
+            elif action == 'reject':
+                if requestdetail.status != 'pending':
+                    messages.error(request, "This request has already been processed.")
+                else:
+                    requestdetail.status = 'rejected'
+                    requestdetail.feedback = None  # Clear feedback on rejection
+                    requestdetail.requester_feedback = None  # Clear requester feedback on rejection
+                    requestdetail.response_file = None  # Clear response file on rejection
+                    requestdetail.save()
+                    messages.success(request, "Request rejected successfully!")
+                    Notification.objects.create(
+                        recipient=requestdetail.requester,
+                        message=f"Your request (ID: {requestdetail.Id}) has been rejected by {employee.firstName} {employee.lastName}. <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                        request_type='general_request_status',
+                        request_id=requestdetail.Id
+                    )
+                    try:
+                        AuditLog.objects.create(
+                            action_type='other',
+                            action=f"Rejected request {requestdetail.Id}",
+                            performed_by=employee,
+                            details=f"Request ID: {requestdetail.Id}, Requester ID: {requestdetail.requester.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Request rejected, but failed to log action: {str(e)}")
+            elif action == 'feedback':
+                if requestdetail.status != 'pending':
+                    messages.error(request, "Cannot provide feedback for a processed request.")
+                    return redirect('requestdetails', rid=rid)
+                if not feedback or len(feedback) < 5:
+                    messages.error(request, "Feedback must be at least 5 characters long to seek clarification.")
+                    return redirect('requestdetails', rid=rid)
+                
+                requestdetail.feedback = feedback
+                requestdetail.requester_feedback = None  # Clear requester feedback when new feedback is provided
+                requestdetail.response_file = None  # Clear response file when new feedback is provided
+                requestdetail.save()
+                messages.success(request, "Feedback submitted successfully.")
+                Notification.objects.create(
+                    recipient=requestdetail.requester,
+                    message=f"{employee.firstName} {employee.lastName} has provided feedback on your request (ID: {requestdetail.Id}): {feedback[:50]}... <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                    request_type='general_request_feedback',
+                    request_id=requestdetail.Id
+                )
+                try:
+                    AuditLog.objects.create(
+                        action_type='update',
+                        action=f"Feedback provided for request {requestdetail.Id}",
+                        performed_by=employee,
+                        details=f"Request ID: {requestdetail.Id}, Requester ID: {requestdetail.requester.eID}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Feedback submitted, but failed to log action: {str(e)}")
+        elif requestdetail.requester == employee:
+            # Actions for the requester
+            if action == 'lock':
+                if requestdetail.status != 'approved':
+                    messages.error(request, "Only approved requests can be locked.")
+                elif not requestdetail.feedback:
+                    messages.error(request, "Cannot lock the request without feedback from the recipient.")
+                elif requestdetail.is_locked:
+                    messages.error(request, "This request is already locked.")
+                else:
+                    requestdetail.is_locked = True
+                    requestdetail.save()
+                    messages.success(request, "Request locked successfully.")
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action=f"Locked request {requestdetail.Id}",
+                            performed_by=employee,
+                            details=f"Request ID: {requestdetail.Id}, Recipient: {requestdetail.destination_employee.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Request locked, but failed to log action: {str(e)}")
+            elif action == 'respond':
+                # Re-fetch the request to handle concurrency issues
+                requestdetail = get_object_or_404(Requests, Id=rid)
+                if requestdetail.status != 'pending':
+                    messages.error(request, "Cannot respond to a processed request.")
+                    return redirect('requestdetails', rid=rid)
+                if not requestdetail.feedback or not requestdetail.feedback.strip():
+                    messages.error(request, "Cannot respond until meaningful feedback is provided by the recipient.")
+                    return redirect('requestdetails', rid=rid)
+
+                requester_feedback = request.POST.get('requester_feedback', '').strip()
+                if not requester_feedback and 'response_file' not in request.FILES:
+                    messages.error(request, "Please provide feedback or attach a file to respond.")
+                    return redirect('requestdetails', rid=rid)
+
+                # Update the fields and save
+                if requester_feedback:
+                    requestdetail.requester_feedback = requester_feedback
+                if 'response_file' in request.FILES:
+                    requestdetail.response_file = request.FILES['response_file']
+                try:
+                    requestdetail.save()
+                    messages.success(request, "Response submitted successfully.")
+                    notification_message = f"{employee.firstName} {employee.lastName} has responded to your feedback on request (ID: {requestdetail.Id})."
+                    if requester_feedback:
+                        notification_message += f" Feedback: {requester_feedback[:50]}..."
+                    if requestdetail.response_file:
+                        notification_message += " A file has been attached."
+                    notification_message += f" <a href='/ems/requestdetails/{requestdetail.Id}/' class='text-blue-600 hover:underline'>View</a>"
+                    Notification.objects.create(
+                        recipient=requestdetail.destination_employee,
+                        message=notification_message,
+                        request_type='general_request_response',
+                        request_id=requestdetail.Id
+                    )
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action=f"Response submitted for request {requestdetail.Id}",
+                            performed_by=employee,
+                            details=f"Request ID: {requestdetail.Id}, Recipient: {requestdetail.destination_employee.eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Response submitted, but failed to log action: {str(e)}")
+                except ValidationError as e:
+                    for field, errors in e.message_dict.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+
+        return redirect('requestdetails', rid=rid)
+
+    # Ensure can_respond aligns with model validation
+    can_respond = (
+        requestdetail.requester == employee and
+        requestdetail.status == 'pending' and
+        bool(requestdetail.feedback and requestdetail.feedback.strip())
+    )
 
     return render(request, "employee/requestdetails.html", {
         "requestdetail": requestdetail,
         "can_process": requestdetail.destination_employee == employee and requestdetail.status == 'pending',
+        "can_lock": requestdetail.requester == employee and requestdetail.status == 'approved' and bool(requestdetail.feedback and requestdetail.feedback.strip()) and not requestdetail.is_locked,
+        "can_respond": can_respond,
     })
 
 
-# Assigned Work List view (restricted to managers and admins)
 @role_required('hr','manager', 'admin')
 def assignedWorkList(request):
     assigner = Employee.objects.get(eID=request.user.username)
     works = WorkAssignments.objects.filter(assignerId=assigner).order_by('-assignDate')
     return render(request, "employee/assignedworklist.html", {"works": works})
 
-# Delete Work view (restricted to managers and admins)
+
 @role_required('hr','manager', 'admin')
 def deleteWork(request, wid):
     assigner = Employee.objects.get(eID=request.user.username)
@@ -850,7 +1039,7 @@ def deleteWork(request, wid):
     works = WorkAssignments.objects.filter(assignerId=assigner).order_by('-assignDate')
     return render(request, "employee/assignedworklist.html", {"works": works})
 
-# Update Work view (restricted to managers and admins)
+
 @role_required('manager', 'admin')
 def updateWork(request, wid):
     assigner = Employee.objects.get(eID=request.user.username)
@@ -888,7 +1077,6 @@ def updateWork(request, wid):
     return render(request, "employee/updatework.html", {'currentWork': work, "filledForm": form, "flag": flag})
 
 
-# Profile view (accessible to all authenticated employees)
 @role_required('employee', 'manager', 'hr', 'admin')
 def profile(request):
     try:
@@ -897,31 +1085,62 @@ def profile(request):
         messages.error(request, "Employee profile not found.")
         return redirect('dashboard')
 
+    password_form = PasswordChangeForm(user=request.user)
+    emergency_form = EmergencyContactForm(employee=employee)
+    document_form = DocumentForm()
+
     if request.method == "POST":
-        employee.firstName = request.POST.get('firstName', employee.firstName)
-        employee.middleName = request.POST.get('middleName', employee.middleName)
-        employee.lastName = request.POST.get('lastName', employee.lastName)
-        employee.phoneNo = request.POST.get('phoneNo', employee.phoneNo)
-        employee.email = request.POST.get('email', employee.email)
-        try:
-            employee.save()
-            messages.success(request, "Profile updated successfully!")
-        except Exception as e:
-            messages.error(request, f"Error updating profile: {e}")
+        if 'update_profile' in request.POST:
+            employee.firstName = request.POST.get('firstName', employee.firstName)
+            employee.middleName = request.POST.get('middleName', employee.middleName)
+            employee.lastName = request.POST.get('lastName', employee.lastName)
+            employee.phoneNo = request.POST.get('phoneNo', employee.phoneNo)
+            employee.email = request.POST.get('email', employee.email)
+            try:
+                employee.save()
+                messages.success(request, "Profile updated successfully!")
+            except Exception as e:
+                messages.error(request, f"Error updating profile: {e}")
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(user=request.user, data=request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                update_session_auth_hash(request, password_form.user)
+                messages.success(request, "Your password was successfully updated!")
+            else:
+                for field, errors in password_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field if field != '__all__' else 'Error'}: {error}")
+        elif 'add_emergency_contact' in request.POST:
+            emergency_form = EmergencyContactForm(request.POST, employee=employee)
+            if emergency_form.is_valid():
+                emergency_contact = emergency_form.save(commit=False)
+                emergency_contact.employee = employee
+                emergency_contact.save()
+                messages.success(request, "Emergency contact added successfully.")
+                return redirect('profile')
+        elif 'add_document' in request.POST:
+            document_form = DocumentForm(request.POST, request.FILES)
+            if document_form.is_valid():
+                document = document_form.save(commit=False)
+                document.employee = employee
+                document.save()
+                messages.success(request, "Document uploaded successfully.")
+                return redirect('profile')
         return redirect('profile')
 
-    return render(request, 'employee/profile.html', {'employee': employee})
+    return render(request, 'employee/profile.html', {
+        'employee': employee,
+        'password_form': password_form,
+        'emergency_form': emergency_form,
+        'document_form': document_form,
+    })
 
 
 @role_required('hr', 'admin')
 def hr_dashboard(request):
-    # Total number of employees
     total_employees = Employee.objects.count()
-
-    # Recent notices (last 5, ordered by publish date)
     recent_notices = Notice.objects.order_by('-publishDate')[:5]
-
-    # Attendance summary: Count days by status (present, absent, leave) per month
     attendance_summary = (
         Attendance.objects
         .annotate(month=TruncMonth('date'))
@@ -936,10 +1155,7 @@ def hr_dashboard(request):
             formatted_summary[month_str] = {'present': 0, 'absent': 0, 'leave': 0}
         formatted_summary[month_str][entry['status']] = entry['total_days']
 
-    # Employee attendance history
     attendance_records = Attendance.objects.select_related('eId').order_by('-date')
-    
-    # Date filter for attendance history
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     if start_date and end_date:
@@ -950,18 +1166,16 @@ def hr_dashboard(request):
         except ValueError:
             messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
 
-    # Employee filter (optional)
     employee_id = request.GET.get('employee_id')
     if employee_id:
         attendance_records = attendance_records.filter(eId__eID=employee_id)
 
-    # Pagination
-    paginator = Paginator(attendance_records, 10)  # 10 records per page
+    paginator = Paginator(attendance_records, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # List of employees for filter dropdown
     employees = Employee.objects.all().order_by('firstName', 'lastName')
+    departments = Department.objects.all()
 
     context = {
         'total_employees': total_employees,
@@ -970,8 +1184,318 @@ def hr_dashboard(request):
         'page_obj': page_obj,
         'employees': employees,
         'selected_employee_id': employee_id,
+        'departments': departments,
     }
     return render(request, 'employee/hr_dashboard.html', context)
+
+@role_required('hr', 'admin')
+def employee_database(request):
+    employees = Employee.objects.select_related('department').order_by('eID')
+    
+    # Filters
+    department_id = request.GET.get('department_id')
+    role = request.GET.get('role')
+    status = request.GET.get('status')
+    
+    if department_id:
+        employees = employees.filter(department__dept_id=department_id)
+    if role:
+        employees = employees.filter(role=role)
+    if status:
+        if status == 'active':
+            employees = employees.filter(is_active=True, is_archived=False)
+        elif status == 'inactive':
+            employees = employees.filter(is_active=False)
+        elif status == 'archived':
+            employees = employees.filter(is_archived=True)
+    
+    paginator = Paginator(employees, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    departments = Department.objects.all()
+    role_choices = Employee._meta.get_field('role').choices
+    status_choices = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('archived', 'Archived'),
+    ]
+    
+    context = {
+        'page_obj': page_obj,
+        'departments': departments,
+        'role_choices': role_choices,
+        'status_choices': status_choices,
+        'selected_department_id': department_id,
+        'selected_role': role,
+        'selected_status': status,
+    }
+    return render(request, 'employee/employee_database.html', context)
+
+
+@role_required('hr', 'admin')
+def employee_detail(request, eID):
+    employee = get_object_or_404(Employee, eID=eID)
+    document_form = DocumentForm()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        performed_by = Employee.objects.filter(eID=request.user.username).first()
+        
+        if action == 'add_document':
+            document_form = DocumentForm(request.POST, request.FILES)
+            if document_form.is_valid():
+                document = document_form.save(commit=False)
+                document.employee = employee
+                document.save()
+                AuditLog.objects.create(
+                    action_type='create',
+                    action="Added Document",
+                    performed_by=performed_by,
+                    details=f"Document: {document.title} for {employee.eID}"
+                )
+                messages.success(request, "Document uploaded successfully.")
+                return redirect('employee_detail', eID=eID)
+    
+    # Fetch role change history
+    role_history = RoleChangeLog.objects.filter(employee=employee).order_by('-changed_at')
+    
+    context = {
+        'employee': employee,
+        'document_form': document_form,
+        'role_history': role_history,
+    }
+    return render(request, 'employee/employee_detail.html', context)
+
+@role_required('hr', 'admin')
+def export_employee_data(request):
+    department_id = request.GET.get('department_id')
+    role = request.GET.get('role')
+    status = request.GET.get('status')
+    
+    employees = Employee.objects.select_related('department').order_by('eID')
+    
+    if department_id:
+        employees = employees.filter(department__dept_id=department_id)
+    if role:
+        employees = employees.filter(role=role)
+    if status:
+        if status == 'active':
+            employees = employees.filter(is_active=True, is_archived=False)
+        elif status == 'inactive':
+            employees = employees.filter(is_active=False)
+        elif status == 'archived':
+            employees = employees.filter(is_archived=True)
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    elements.append(Paragraph("Employee Data Report", styles['Title']))
+    elements.append(Spacer(1, 12))
+    
+    # Filters applied
+    filter_text = "Filters: "
+    filters = []
+    if department_id:
+        dept = Department.objects.get(dept_id=department_id)
+        filters.append(f"Department: {dept.name}")
+    if role:
+        role_display = dict(Employee._meta.get_field('role').choices).get(role, role)
+        filters.append(f"Role: {role_display}")
+    if status:
+        status_display = {'active': 'Active', 'inactive': 'Inactive', 'archived': 'Archived'}.get(status, status)
+        filters.append(f"Status: {status_display}")
+    filter_text += ", ".join(filters) if filters else "None"
+    elements.append(Paragraph(filter_text, styles['Normal']))
+    elements.append(Spacer(1, 12))
+    
+    # Table data
+    data = [['EID', 'Name', 'Department', 'Role', 'Email', 'Phone', 'Join Date', 'Status']]
+    for emp in employees:
+        status = 'Active' if emp.is_active and not emp.is_archived else 'Inactive' if not emp.is_archived else 'Archived'
+        data.append([
+            emp.eID,
+            f"{emp.firstName} {emp.lastName}",
+            emp.department.name if emp.department else '—',
+            dict(role_choices).get(emp.role, emp.role),
+            emp.email,
+            emp.phoneNo,
+            emp.joinDate.strftime('%Y-%m-%d'),
+            status,
+        ])
+    
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="employee_data_report.pdf"'
+    
+    # Log the export action
+    performed_by = Employee.objects.filter(eID=request.user.username).first()
+    AuditLog.objects.create(
+        action_type='other',
+        action="Exported Employee Data",
+        performed_by=performed_by,
+        details=f"Filters - Department: {department_id or 'All'}, Role: {role or 'All'}, Status: {status or 'All'}"
+    )
+    
+    return response
+
+
+@role_required('hr', 'admin')
+def export_employee_detail(request, eID):
+    employee = get_object_or_404(Employee, eID=eID)
+    
+    # Fetch the current user's Employee instance
+    try:
+        current_employee = Employee.objects.get(eID=request.user.username)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee profile not found for the current user.")
+        return redirect('dashboard')
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    elements.append(Paragraph(f"Employee Profile: {employee.eID}", styles['Title']))
+    elements.append(Spacer(1, 12))
+    
+    # Personal Information
+    elements.append(Paragraph("Personal Information", styles['Heading2']))
+    personal_data = [
+        ['EID', employee.eID],
+        ['Name', f"{employee.firstName} {employee.middleName} {employee.lastName}"],
+        ['Email', employee.email],
+        ['Phone', employee.phoneNo],
+        ['Aadhar No', employee.addharNo],
+        ['Date of Birth', employee.dOB.strftime('%Y-%m-%d')],
+        ['Designation', employee.designation],
+        ['Department', employee.department.name if employee.department else '—'],
+        ['Role', dict(role_choices).get(employee.role, employee.role)],
+        ['Salary', employee.salary],
+        ['Join Date', employee.joinDate.strftime('%Y-%m-%d')],
+        ['Status', 'Active' if employee.is_active and not employee.is_archived else 'Inactive' if not employee.is_archived else 'Archived'],
+    ]
+    personal_table = Table(personal_data)
+    personal_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(personal_table)
+    elements.append(Spacer(1, 12))
+    
+    # Emergency Contacts
+    elements.append(Paragraph("Emergency Contacts", styles['Heading2']))
+    emergency_data = [['Name', 'Relationship', 'Phone', 'Email']]
+    for contact in employee.emergency_contacts.all():
+        emergency_data.append([
+            contact.name,
+            contact.relationship,
+            contact.phone_no,
+            contact.email or '—',
+        ])
+    if len(emergency_data) == 1:
+        emergency_data.append(['No emergency contacts found.', '', '', ''])
+    emergency_table = Table(emergency_data)
+    emergency_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(emergency_table)
+    elements.append(Spacer(1, 12))
+    
+    # Documents
+    elements.append(Paragraph("Documents", styles['Heading2']))
+    document_data = [['Title', 'Type', 'Uploaded At']]
+    for document in employee.documents.all():
+        if not document.is_sensitive or current_employee.role in ['hr', 'admin']:
+            document_data.append([
+                document.title,
+                document.get_document_type_display(),
+                document.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+            ])
+    if len(document_data) == 1:
+        document_data.append(['No documents found.', '', ''])
+    document_table = Table(document_data)
+    document_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(document_table)
+    elements.append(Spacer(1, 12))
+    
+    # Role Change History
+    elements.append(Paragraph("Role Change History", styles['Heading2']))
+    role_data = [['Old Role', 'New Role', 'Changed By', 'Changed At']]
+    for log in RoleChangeLog.objects.filter(employee=employee).order_by('-changed_at'):
+        role_data.append([
+            log.old_role.title(),
+            log.new_role.title(),
+            f"{log.changed_by.firstName} {log.changed_by.lastName}",
+            log.changed_at.strftime('%Y-%m-%d %H:%M'),
+        ])
+    if len(role_data) == 1:
+        role_data.append(['No role changes found.', '', '', ''])
+    role_table = Table(role_data)
+    role_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(role_table)
+    
+    # Build the PDF
+    doc.build(elements)
+    
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="employee_{employee.eID}_profile.pdf"'
+    
+    # Log the export action
+    AuditLog.objects.create(
+        action_type='other',
+        action="Exported Employee Profile",
+        performed_by=current_employee,
+        details=f"Employee ID: {employee.eID}"
+    )
+    
+    return response
 
 
 # Manage Roles view (restricted to HR and admins)
@@ -989,12 +1513,7 @@ def manage_roles(request):
     employees = Employee.objects.all()
     return render(request, 'employee/manage_roles.html', {'employees': employees})
 
-# employee/views.py
-from django.shortcuts import redirect, render
-from django.contrib import messages
-from django.core.paginator import Paginator
-from .models import LeaveRequest  # Ensure LeaveRequest is imported
-from .decorators import role_required
+
 
 @role_required('hr', 'admin')
 def employee_requests(request):
@@ -1056,7 +1575,7 @@ def employee_requests(request):
                 leave_request.save()
                 try:
                     AuditLog.objects.create(
-                        action_type='other',
+                        action_type='update',
                         action=f"Rejected leave request {request_id}",
                         performed_by=employee,
                         details=f"Leave Request ID: {request_id}, Requester ID: {leave_request.requester.eID}"
@@ -1079,11 +1598,8 @@ def employee_requests(request):
     }
     return render(request, 'employee/employee_requests.html', context)
 
-# employee/views.py
-from django.db.models import Count, Q
-from django.utils import timezone
 
-@role_required('manager', 'admin')
+@role_required('hr','manager', 'admin')
 def productivity_dashboard(request):
     assigner = Employee.objects.get(eID=request.user.username)
     departments = Employee.objects.values_list('department', flat=True).distinct()
@@ -1198,20 +1714,6 @@ def managerial_requests(request):
     }
     return render(request, 'employee/managerial_requests.html', context)
 
-# employee/views.py
-from django.shortcuts import redirect, render
-from django.contrib import messages
-from django.core.paginator import Paginator
-from .models import Employee, RoleChangeLog, Notification  # Add RoleChangeLog and Notification
-from .decorators import role_required
-
-# employee/views.py
-from django.shortcuts import redirect, render
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db import models
-from .models import Employee, RoleChangeLog, Notification, PendingRoleChange, role_choices  # Add PendingRoleChange
-from .decorators import role_required
 
 @role_required('hr', 'admin')
 def manage_roles(request):
@@ -1464,10 +1966,6 @@ def role_change_history(request):
 
     return render(request, 'employee/role_change_history.html', {'page_obj': page_obj})
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .models import Department
-from .decorators import role_required
 
 @role_required('admin')
 def system_settings(request):
@@ -1639,42 +2137,130 @@ def audit_logs(request):
     return render(request, 'employee/audit_logs.html', context)
 
 
+
 @role_required('admin')
 def employee_management(request):
     employees = Employee.objects.all().order_by('eID')
     form = EmployeeForm()
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        employee = get_employee(request)
+        employee = get_employee(request)  # Current logged-in admin
+
         if action == 'add':
             form = EmployeeForm(request.POST)
             if form.is_valid():
-                new_employee = form.save()
-                if employee:
+                try:
+                    new_employee = form.save(commit=False)
+                    new_employee.has_completed_signup = False  # Employee must sign up
+                    new_employee.save()
+
+                    if employee:
+                        try:
+                            AuditLog.objects.create(
+                                action_type='create',
+                                action="Employee Added",
+                                performed_by=employee,
+                                details=f"Employee ID: {new_employee.eID}, Role: {new_employee.role}, Can Assign Cross-Department: {new_employee.can_assign_cross_department}"
+                            )
+                        except Exception as e:
+                            messages.warning(request, f"Employee added, but failed to log action: {str(e)}")
+                    messages.success(request, f"Employee {new_employee.eID} added successfully. They must sign up to set their password.")
+                    return redirect('employee_management')
+                except ValidationError as e:
+                    for field, errors in e.message_dict.items():
+                        for error in errors:
+                            form.add_error(field if field != '__all__' else None, error)
+                except IntegrityError as e:
+                    form.add_error(None, f"Failed to add employee: {str(e)}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field if field != '__all__' else 'Error'}: {error}")
+        elif action == 'deactivate':
+            eID = request.POST.get('eID')
+            try:
+                target_employee = Employee.objects.get(eID=eID)
+                if target_employee.role == 'admin' and target_employee.eID == employee.eID:
+                    messages.error(request, "You cannot deactivate your own account.")
+                else:
+                    target_employee.is_active = False
+                    target_employee.save()
                     try:
                         AuditLog.objects.create(
-                            action_type='create',
-                            action="Employee Added",
+                            action_type='update',
+                            action="Employee Deactivated",
                             performed_by=employee,
-                            details=f"Employee ID: {new_employee.eID}, Role: {new_employee.role}, Can Assign Cross-Department: {new_employee.can_assign_cross_department}"
+                            details=f"Employee ID: {eID}"
                         )
                     except Exception as e:
-                        messages.warning(request, f"Employee added, but failed to log action: {str(e)}")
-                messages.success(request, "Employee added successfully.")
-                return redirect('employee_management')
-        elif action == 'delete':
+                        messages.warning(request, f"Employee deactivated, but failed to log action: {str(e)}")
+                    messages.success(request, f"Employee {eID} has been deactivated.")
+            except Employee.DoesNotExist:
+                messages.error(request, f"Employee with ID {eID} does not exist.")
+            return redirect('employee_management')
+        elif action == 'activate':
             eID = request.POST.get('eID')
-            Employee.objects.filter(eID=eID).delete()
-            if employee:
+            try:
+                target_employee = Employee.objects.get(eID=eID)
+                if target_employee.is_archived:
+                    messages.error(request, "You must unarchive the employee before activating their account.")
+                else:
+                    target_employee.is_active = True
+                    target_employee.save()
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action="Employee Activated",
+                            performed_by=employee,
+                            details=f"Employee ID: {eID}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Employee activated, but failed to log action: {str(e)}")
+                    messages.success(request, f"Employee {eID} has been activated.")
+            except Employee.DoesNotExist:
+                messages.error(request, f"Employee with ID {eID} does not exist.")
+            return redirect('employee_management')
+        elif action == 'archive':
+            eID = request.POST.get('eID')
+            try:
+                target_employee = Employee.objects.get(eID=eID)
+                if target_employee.role == 'admin' and target_employee.eID == employee.eID:
+                    messages.error(request, "You cannot archive your own account.")
+                else:
+                    target_employee.is_archived = True
+                    target_employee.is_active = False
+                    target_employee.save()
+                    try:
+                        AuditLog.objects.create(
+                            action_type='update',
+                            action="Employee Archived",
+                            performed_by=employee,
+                            details=f"Employee ID: {eID}, Archived At: {target_employee.archived_at}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Employee archived, but failed to log action: {str(e)}")
+                    messages.success(request, f"Employee {eID} has been archived.")
+            except Employee.DoesNotExist:
+                messages.error(request, f"Employee with ID {eID} does not exist.")
+            return redirect('employee_management')
+        elif action == 'unarchive':
+            eID = request.POST.get('eID')
+            try:
+                target_employee = Employee.objects.get(eID=eID)
+                target_employee.is_archived = False
+                target_employee.save()
                 try:
                     AuditLog.objects.create(
-                        action_type='delete',
-                        action="Employee Deleted",
-                        performed_by=employee
+                        action_type='update',
+                        action="Employee Unarchived",
+                        performed_by=employee,
+                        details=f"Employee ID: {eID}"
                     )
                 except Exception as e:
-                    messages.warning(request, f"Employee deleted, but failed to log action: {str(e)}")
-            messages.success(request, "Employee deleted successfully.")
+                    messages.warning(request, f"Employee unarchived, but failed to log action: {str(e)}")
+                messages.success(request, f"Employee {eID} has been unarchived.")
+            except Employee.DoesNotExist:
+                messages.error(request, f"Employee with ID {eID} does not exist.")
             return redirect('employee_management')
 
     context = {
@@ -1699,8 +2285,7 @@ def leave_request_details(request, rid):
         "can_process": leave_request.destination_employee == employee and leave_request.status == 'pending',
     })
 
-# employee/views.py
-# employee/views.py
+
 @role_required('hr', 'admin')
 def manage_notices(request):
     notices = Notice.objects.all()
@@ -1717,3 +2302,999 @@ def manage_notices(request):
         'notices': notices,
     }
     return render(request, 'employee/manage_notices.html', context)
+
+
+@role_required('employee', 'manager')
+def leave_request(request):
+    employee = Employee.objects.get(eID=request.user.username)
+    today = timezone.now().date()
+    
+    if request.method == 'POST':
+        start_date_str = request.POST.get('leave_start_date')
+        end_date_str = request.POST.get('leave_end_date')
+        reason = request.POST.get('leave_reason')
+        
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            
+            if start_date < today:
+                messages.error(request, "Start date cannot be in the past.")
+            elif end_date < start_date:
+                messages.error(request, "End date cannot be before start date.")
+            else:
+                # Route leave request to HR, with admin as backup
+                destination_employee = Employee.objects.filter(role='hr').first()
+                if not destination_employee:
+                    destination_employee = Employee.objects.filter(role='admin').first()
+                
+                if not destination_employee:
+                    messages.error(request, "No HR or admin available to process this leave request.")
+                else:
+                    leave_request = LeaveRequest.objects.create(
+                        Id=f"LEAVE{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                        requester=employee,
+                        request_message=reason,
+                        request_date=timezone.now(),
+                        destination_employee=destination_employee,
+                        status='pending',
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_compulsory=False
+                    )
+                    try:
+                        AuditLog.objects.create(
+                            action_type='create',
+                            action=f"Submitted leave request {leave_request.Id}",
+                            performed_by=employee,
+                            details=f"Leave Request ID: {leave_request.Id}, Start Date: {start_date}, End Date: {end_date}"
+                        )
+                    except Exception as e:
+                        messages.warning(request, f"Leave request submitted, but failed to log action: {str(e)}")
+                    Notification.objects.create(
+                        recipient=destination_employee,
+                        message=f"New leave request from {employee.firstName} {employee.lastName}: {reason[:50]}... <a href='/ems/leave-request-details/{leave_request.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                        request_type='leave_request',
+                        request_id=leave_request.Id
+                    )
+                    messages.success(request, "Leave request submitted successfully!")
+        except ValueError:
+            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+        
+        return redirect('leave_request')
+    
+    # Display employee's past leave requests
+    leave_requests = LeaveRequest.objects.filter(requester=employee).order_by('-request_date')
+    paginator = Paginator(leave_requests, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'employee': employee,
+        'page_obj': page_obj,
+    }
+    return render(request, 'employee/leave_request.html', context)
+
+
+@role_required('hr', 'admin')
+def issue_compulsory_leave(request):
+    employee = Employee.objects.get(eID=request.user.username)
+    today = timezone.now().date()
+    
+    if request.method == 'POST':
+        target_employee_id = request.POST.get('employee_id')
+        start_date_str = request.POST.get('leave_start_date')
+        end_date_str = request.POST.get('leave_end_date')
+        reason = request.POST.get('leave_reason')
+        
+        try:
+            target_employee = Employee.objects.get(eID=target_employee_id)
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            
+            if start_date < today:
+                messages.error(request, "Start date cannot be in the past.")
+            elif end_date < start_date:
+                messages.error(request, "End date cannot be before start date.")
+            else:
+                # Create compulsory leave request (automatically approved)
+                leave_request = LeaveRequest.objects.create(
+                    Id=f"LEAVE{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                    requester=target_employee,
+                    request_message=reason,
+                    request_date=timezone.now(),
+                    destination_employee=employee,  # Issued by HR/admin
+                    status='approved',
+                    start_date=start_date,
+                    end_date=end_date,
+                    is_compulsory=True
+                )
+                # Update attendance records for the leave period
+                current_date = start_date
+                while current_date <= end_date:
+                    attendance_record = Attendance.objects.filter(
+                        eId=target_employee,
+                        date=current_date
+                    ).first()
+                    if attendance_record:
+                        attendance_record.status = 'leave'
+                        attendance_record.check_in_time = None
+                        attendance_record.check_out_time = None
+                        attendance_record.save()
+                    else:
+                        Attendance.objects.create(
+                            eId=target_employee,
+                            date=current_date,
+                            status='leave',
+                            check_in_time=None,
+                            check_out_time=None
+                        )
+                    current_date += timedelta(days=1)
+                
+                try:
+                    AuditLog.objects.create(
+                        action_type='create',
+                        action=f"Issued compulsory leave {leave_request.Id}",
+                        performed_by=employee,
+                        details=f"Leave Request ID: {leave_request.Id}, Employee ID: {target_employee.eID}, Start Date: {start_date}, End Date: {end_date}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Compulsory leave issued, but failed to log action: {str(e)}")
+                Notification.objects.create(
+                    recipient=target_employee,
+                    message=f"You have been issued a compulsory leave by {employee.firstName} {employee.lastName} from {start_date} to {end_date}. Reason: {reason[:50]}... <a href='/ems/leave-request-details/{leave_request.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                    request_type='leave_request',
+                    request_id=leave_request.Id
+                )
+                messages.success(request, f"Compulsory leave issued to {target_employee.firstName} {target_employee.lastName} successfully!")
+        except Employee.DoesNotExist:
+            messages.error(request, "Employee not found.")
+        except ValueError:
+            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+        
+        return redirect('issue_compulsory_leave')
+    
+    # List all employees for HR/admin to select
+    employees = Employee.objects.exclude(eID=employee.eID)
+    
+    context = {
+        'employee': employee,
+        'employees': employees,
+    }
+    return render(request, 'employee/issue_compulsory_leave.html', context)
+
+
+
+@login_required
+@role_required('hr', 'admin')
+def standard_hr_reports(request):
+    # Log the access to standard reports
+    current_employee = Employee.objects.get(eID=request.user.username)
+    AuditLog.objects.create(
+        action_type='other',
+        action='Viewed Standard HR Reports',
+        performed_by=current_employee,
+        details='User accessed the Standard HR Reports page.'
+    )
+
+    # Headcount
+    headcount = Employee.objects.filter(is_active=True, is_archived=False).count()
+    headcount_by_dept = Employee.objects.filter(is_active=True, is_archived=False) \
+        .values('department__name').annotate(count=Count('eID')).order_by('department__name')
+
+    # Turnover Rate (last 12 months)
+    one_year_ago = timezone.now().date() - timedelta(days=365)
+    total_employees_start = Employee.objects.filter(
+        joinDate__lte=one_year_ago,
+        is_active=True
+    ).count()
+    turnovers = Employee.objects.filter(
+        is_archived=True,
+        archived_at__gte=one_year_ago,
+        archived_at__lte=timezone.now().date()
+    ).count()
+    turnover_rate = (turnovers / total_employees_start * 100) if total_employees_start > 0 else 0
+
+    # Attendance Summary (last 30 days)
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    attendance_summary = Attendance.objects.filter(
+        date__gte=thirty_days_ago,
+        date__lte=timezone.now().date()
+    ).values('status').annotate(count=Count('id')).order_by('status')
+
+    # Leave Taken
+    leave_requests = LeaveRequest.objects.filter(
+        status='approved',
+        end_date__lte=timezone.now().date()
+    ).select_related('requester')
+
+    leave_data = {}
+    for leave in leave_requests:
+        employee_id = leave.requester.eID
+        if employee_id not in leave_data:
+            leave_data[employee_id] = {
+                'requester__eID': leave.requester.eID,
+                'requester__firstName': leave.requester.firstName,
+                'requester__lastName': leave.requester.lastName,
+                'days_taken': 0
+            }
+        days = (leave.end_date - leave.start_date).days + 1
+        leave_data[employee_id]['days_taken'] += days
+
+    leave_taken = list(leave_data.values())
+    leave_taken.sort(key=lambda x: x['requester__eID'])
+
+    # Performance Review Summary
+    total_reviews = PerformanceReview.objects.count()
+    completed_reviews = PerformanceReview.objects.filter(status='completed').count()
+    completion_rate = (completed_reviews / total_reviews * 100) if total_reviews > 0 else 0
+
+    avg_ratings = ReviewResponse.objects.filter(
+        response_type='employee',  # Updated to use 'employee' since manager feedback is removed
+        rating__isnull=False,
+        review__status='completed'
+    ).values('review__employee__eID', 'review__employee__firstName', 'review__employee__lastName') \
+     .annotate(avg_rating=Avg('rating')).order_by('review__employee__eID')
+
+    avg_ratings_by_dept = ReviewResponse.objects.filter(
+        response_type='employee',  # Updated to use 'employee'
+        rating__isnull=False,
+        review__status='completed'
+    ).values('review__employee__department__name') \
+     .annotate(avg_rating=Avg('rating')).order_by('review__employee__department__name')
+
+    # Work Assignment Status
+    work_assignments = WorkAssignments.objects.all()
+    task_status_summary = work_assignments.values('status').annotate(count=Count('Id')).order_by('status')
+
+    task_completion = work_assignments.values('taskerId__eID', 'taskerId__firstName', 'taskerId__lastName') \
+        .annotate(
+            total_tasks=Count('Id'),
+            completed_tasks=Count('Id', filter=Q(status='completed'))
+        ).order_by('taskerId__eID')
+    for task in task_completion:
+        task['completion_rate'] = (task['completed_tasks'] / task['total_tasks'] * 100) if task['total_tasks'] > 0 else 0
+
+    # Role Change Audit
+    role_changes = RoleChangeLog.objects.all()
+    role_changes_by_month_dict = defaultdict(int)
+    for change in role_changes:
+        changed_at = make_naive(change.changed_at) if timezone.is_aware(change.changed_at) else change.changed_at
+        month_key = changed_at.strftime('%Y-%m')
+        role_changes_by_month_dict[month_key] += 1
+
+    role_changes_by_month = [
+        {'month': month, 'count': count}
+        for month, count in sorted(role_changes_by_month_dict.items())
+    ]
+
+    pending_role_changes = PendingRoleChange.objects.filter(status='pending').count()
+
+    role_transitions = role_changes.values('old_role', 'new_role') \
+        .annotate(count=Count('id')).order_by('-count')[:5]
+
+    # Export as PDF
+    if 'export_pdf' in request.GET:
+        AuditLog.objects.create(
+            action_type='other',
+            action='Exported Standard HR Reports as PDF',
+            performed_by=current_employee,
+            details='User exported Standard HR Reports as PDF.'
+        )
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Standard HR Reports", styles['Title']))
+        elements.append(Spacer(1, 12))
+
+        # Headcount
+        elements.append(Paragraph("Headcount", styles['Heading2']))
+        elements.append(Paragraph(f"Total Active Employees: {headcount}", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        headcount_data = [['Department', 'Count']]
+        for dept in headcount_by_dept:
+            headcount_data.append([dept['department__name'] or 'No Department', dept['count']])
+        headcount_table = Table(headcount_data)
+        headcount_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(headcount_table)
+        elements.append(Spacer(1, 12))
+
+        # Turnover Rate
+        elements.append(Paragraph("Turnover Rate (Last 12 Months)", styles['Heading2']))
+        elements.append(Paragraph(f"Turnover Rate: {turnover_rate:.2f}%", styles['Normal']))
+        elements.append(Spacer(1, 12))
+
+        # Attendance Summary
+        elements.append(Paragraph("Attendance Summary (Last 30 Days)", styles['Heading2']))
+        attendance_data = [['Status', 'Count']]
+        for summary in attendance_summary:
+            attendance_data.append([summary['status'].title(), summary['count']])
+        attendance_table = Table(attendance_data)
+        attendance_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(attendance_table)
+        elements.append(Spacer(1, 12))
+
+        # Leave Taken
+        elements.append(Paragraph("Leave Taken", styles['Heading2']))
+        leave_data_table = [['Employee ID', 'Name', 'Days Taken']]
+        for leave in leave_taken:
+            name = f"{leave['requester__firstName']} {leave['requester__lastName']}"
+            leave_data_table.append([leave['requester__eID'], name, leave['days_taken']])
+        leave_table = Table(leave_data_table)
+        leave_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(leave_table)
+        elements.append(Spacer(1, 12))
+
+        # Performance Review Summary
+        elements.append(Paragraph("Performance Review Summary", styles['Heading2']))
+        elements.append(Paragraph(f"Completion Rate: {completion_rate:.2f}%", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        ratings_data = [['Employee ID', 'Name', 'Average Rating']]
+        for rating in avg_ratings:
+            name = f"{rating['review__employee__firstName']} {rating['review__employee__lastName']}"
+            ratings_data.append([rating['review__employee__eID'], name, f"{rating['avg_rating']:.2f}"])
+        ratings_table = Table(ratings_data)
+        ratings_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(ratings_table)
+        elements.append(Spacer(1, 12))
+        dept_ratings_data = [['Department', 'Average Rating']]
+        for dept_rating in avg_ratings_by_dept:
+            dept_ratings_data.append([dept_rating['review__employee__department__name'] or 'No Department', f"{dept_rating['avg_rating']:.2f}"])
+        dept_ratings_table = Table(dept_ratings_data)
+        dept_ratings_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(dept_ratings_table)
+        elements.append(Spacer(1, 12))
+
+        # Work Assignment Status
+        elements.append(Paragraph("Work Assignment Status", styles['Heading2']))
+        task_status_data = [['Status', 'Count']]
+        for summary in task_status_summary:
+            task_status_data.append([summary['status'].title(), summary['count']])
+        task_status_table = Table(task_status_data)
+        task_status_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(task_status_table)
+        elements.append(Spacer(1, 12))
+        task_completion_data = [['Employee ID', 'Name', 'Total Tasks', 'Completed Tasks', 'Completion Rate (%)']]
+        for task in task_completion:
+            name = f"{task['taskerId__firstName']} {task['taskerId__lastName']}"
+            task_completion_data.append([
+                task['taskerId__eID'], name, task['total_tasks'], task['completed_tasks'], f"{task['completion_rate']:.2f}"
+            ])
+        task_completion_table = Table(task_completion_data)
+        task_completion_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(task_completion_table)
+        elements.append(Spacer(1, 12))
+
+        # Role Change Audit
+        elements.append(Paragraph("Role Change Audit", styles['Heading2']))
+        elements.append(Paragraph(f"Pending Role Changes: {pending_role_changes}", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        role_changes_data = [['Month', 'Count']]
+        for change in role_changes_by_month:
+            role_changes_data.append([change['month'], change['count']])
+        role_changes_table = Table(role_changes_data)
+        role_changes_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(role_changes_table)
+        elements.append(Spacer(1, 12))
+        role_transitions_data = [['From Role', 'To Role', 'Count']]
+        for transition in role_transitions:
+            role_transitions_data.append([transition['old_role'].title(), transition['new_role'].title(), transition['count']])
+        role_transitions_table = Table(role_transitions_data)
+        role_transitions_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(role_transitions_table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="standard_hr_reports.pdf"'
+        return response
+
+    # Export as CSV
+    if 'export' in request.GET:
+        AuditLog.objects.create(
+            action_type='other',
+            action='Exported Standard HR Reports',
+            performed_by=current_employee,
+            details='User exported Standard HR Reports as CSV.'
+        )
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="hr_reports.csv"'
+        writer = csv.writer(response)
+
+        writer.writerow(['Headcount'])
+        writer.writerow(['Total Active Employees', headcount])
+        writer.writerow(['Department', 'Count'])
+        for dept in headcount_by_dept:
+            writer.writerow([dept['department__name'] or 'No Department', dept['count']])
+        writer.writerow([])
+
+        writer.writerow(['Turnover Rate (Last 12 Months)'])
+        writer.writerow(['Turnovers', turnovers])
+        writer.writerow(['Total Employees at Start', total_employees_start])
+        writer.writerow(['Turnover Rate (%)', f"{turnover_rate:.2f}"])
+        writer.writerow([])
+
+        writer.writerow(['Attendance Summary (Last 30 Days)'])
+        writer.writerow(['Status', 'Count'])
+        for summary in attendance_summary:
+            writer.writerow([summary['status'].title(), summary['count']])
+        writer.writerow([])
+
+        writer.writerow(['Leave Taken'])
+        writer.writerow(['Employee ID', 'Name', 'Days Taken'])
+        for leave in leave_taken:
+            name = f"{leave['requester__firstName']} {leave['requester__lastName']}"
+            writer.writerow([leave['requester__eID'], name, leave['days_taken']])
+        writer.writerow([])
+
+        writer.writerow(['Performance Review Summary'])
+        writer.writerow(['Completion Rate (%)', f"{completion_rate:.2f}"])
+        writer.writerow(['Employee ID', 'Name', 'Average Rating'])
+        for rating in avg_ratings:
+            name = f"{rating['review__employee__firstName']} {rating['review__employee__lastName']}"
+            writer.writerow([rating['review__employee__eID'], name, f"{rating['avg_rating']:.2f}"])
+        writer.writerow(['Department', 'Average Rating'])
+        for dept_rating in avg_ratings_by_dept:
+            writer.writerow([dept_rating['review__employee__department__name'] or 'No Department', f"{dept_rating['avg_rating']:.2f}"])
+        writer.writerow([])
+
+        writer.writerow(['Work Assignment Status'])
+        writer.writerow(['Status', 'Count'])
+        for summary in task_status_summary:
+            writer.writerow([summary['status'].title(), summary['count']])
+        writer.writerow(['Employee ID', 'Name', 'Total Tasks', 'Completed Tasks', 'Completion Rate (%)'])
+        for task in task_completion:
+            name = f"{task['taskerId__firstName']} {task['taskerId__lastName']}"
+            writer.writerow([task['taskerId__eID'], name, task['total_tasks'], task['completed_tasks'], f"{task['completion_rate']:.2f}"])
+        writer.writerow([])
+
+        writer.writerow(['Role Change Audit'])
+        writer.writerow(['Pending Role Changes', pending_role_changes])
+        writer.writerow(['Month', 'Count'])
+        for change in role_changes_by_month:
+            writer.writerow([change['month'], change['count']])
+        writer.writerow(['From Role', 'To Role', 'Count'])
+        for transition in role_transitions:
+            writer.writerow([transition['old_role'].title(), transition['new_role'].title(), transition['count']])
+
+        return response
+
+    context = {
+        'headcount': headcount,
+        'headcount_by_dept': headcount_by_dept,
+        'turnover_rate': turnover_rate,
+        'attendance_summary': attendance_summary,
+        'leave_taken': leave_taken,
+        'avg_ratings': avg_ratings,
+        'avg_ratings_by_dept': avg_ratings_by_dept,
+        'completion_rate': completion_rate,
+        'task_status_summary': task_status_summary,
+        'task_completion': task_completion,
+        'role_changes_by_month': role_changes_by_month,
+        'pending_role_changes': pending_role_changes,
+        'role_transitions': role_transitions,
+    }
+    return render(request, 'employee/standard_hr_reports.html', context)
+
+def analyze_sentiment(text):
+    if not text:
+        return "Neutral"
+    positive_words = ['good', 'great', 'excellent', 'positive', 'happy', 'satisfied']
+    negative_words = ['bad', 'poor', 'terrible', 'negative', 'unhappy', 'dissatisfied']
+    text_lower = text.lower()
+    if any(word in text_lower for word in positive_words):
+        return "Positive"
+    if any(word in text_lower for word in negative_words):
+        return "Negative"
+    return "Neutral"
+
+@login_required
+@role_required('hr', 'admin')
+def view_template_details(request, template_id):
+    template = get_object_or_404(PerformanceReviewTemplate, id=template_id)
+    reviews = PerformanceReview.objects.filter(template=template).order_by('-scheduled_date')
+    questions = template.questions.all()
+
+    # Calculate completion rate for this template
+    total_reviews = reviews.count()
+    completed_reviews = reviews.filter(status='completed').count()
+    template_completion_rate = (completed_reviews / total_reviews * 100) if total_reviews > 0 else 0
+
+    # Analyze responses
+    analysis = {
+        'avg_rating_per_question': [],
+        'sentiment_summary': {'positive': 0, 'neutral': 0, 'negative': 0},
+        'rating_summary': {'positive': 0, 'neutral': 0, 'negative': 0},
+    }
+
+    # Average rating per question
+    for question in questions:
+        responses = ReviewResponse.objects.filter(
+            question=question,
+            review__template=template,
+            review__status='completed'
+        )
+        if question.question_type == 'rating':
+            avg_rating = responses.filter(rating__isnull=False).aggregate(avg=Avg('rating'))['avg']
+            analysis['avg_rating_per_question'].append({
+                'question_text': question.question_text,
+                'avg_rating': avg_rating if avg_rating is not None else 0,
+                'total_responses': responses.count(),
+            })
+
+    # Sentiment and rating summary
+    all_responses = ReviewResponse.objects.filter(
+        review__template=template,
+        review__status='completed'
+    )
+    for response in all_responses:
+        if response.rating is not None:
+            if response.rating >= 4:
+                analysis['rating_summary']['positive'] += 1
+            elif response.rating == 3:
+                analysis['rating_summary']['neutral'] += 1
+            else:
+                analysis['rating_summary']['negative'] += 1
+        if response.text_response:
+            sentiment = analyze_sentiment(response.text_response)
+            analysis['sentiment_summary'][sentiment.lower()] += 1
+
+    # Prepare reviews with their responses
+    reviews_with_responses = []
+    for review in reviews:
+        responses = review.responses.all()
+        reviews_with_responses.append({
+            'review': review,
+            'responses': responses,
+        })
+
+    context = {
+        'template': template,
+        'reviews_with_responses': reviews_with_responses,
+        'questions': questions,
+        'template_completion_rate': template_completion_rate,
+        'analysis': analysis,
+    }
+    return render(request, 'employee/template_details.html', context)
+
+@login_required
+@role_required('hr', 'admin')
+def manage_review_templates(request):
+    templates = PerformanceReviewTemplate.objects.all()
+    return render(request, 'employee/manage_review_templates.html', {'templates': templates})
+
+@login_required
+@role_required('hr', 'admin')
+def create_review_template(request):
+    template_form = PerformanceReviewTemplateForm(request.POST or None)
+    ReviewQuestionFormSet = formset_factory(ReviewQuestionForm, extra=3)
+
+    if request.method == 'POST':
+        formset = ReviewQuestionFormSet(request.POST)
+        if template_form.is_valid() and formset.is_valid():
+            template = template_form.save(commit=False)
+            template.created_by = Employee.objects.get(eID=request.user.username)
+            template.save()
+            for form in formset:
+                if form.cleaned_data:
+                    question = form.save(commit=False)
+                    question.template = template
+                    question.save()
+            messages.success(request, "Performance review template created successfully.")
+            return redirect('manage_review_templates')
+    else:
+        formset = ReviewQuestionFormSet()
+
+    return render(request, 'employee/create_review_template.html', {
+        'template_form': template_form,
+        'formset': formset,
+    })
+
+@login_required
+@role_required('hr', 'admin')
+def schedule_performance_review(request):
+    form = PerformanceReviewScheduleForm(request.POST or None)
+    departments = Department.objects.all()
+    dept_employee_map = {
+        dept.dept_id: list(Employee.objects.filter(department=dept, is_active=True, is_archived=False).values('eID', 'firstName', 'lastName'))
+        for dept in departments
+    }
+    dept_employee_map["0"] = list(Employee.objects.filter(is_active=True, is_archived=False).values('eID', 'firstName', 'lastName'))
+
+    if request.method == 'POST' and form.is_valid():
+        department = form.cleaned_data.get('department')
+        employee = form.cleaned_data.get('employee')
+        template = form.cleaned_data['template']
+        scheduled_date = form.cleaned_data['scheduled_date']
+
+        if employee:
+            review = PerformanceReview.objects.create(
+                employee=employee,
+                template=template,
+                scheduled_date=scheduled_date,
+                status='pending'
+            )
+            Notification.objects.create(
+                recipient=review.employee,
+                message=f"A new performance review has been scheduled for you on {scheduled_date}.",
+                request_type='performance_review',
+                request_id=str(review.id)
+            )
+            messages.success(request, f"Performance review scheduled for {review.employee}.")
+        else:
+            if department:
+                employees = Employee.objects.filter(department=department, is_active=True, is_archived=False)
+                message = f"Performance reviews scheduled for all employees in {department.name}."
+            else:
+                employees = Employee.objects.filter(is_active=True, is_archived=False)
+                message = "Performance reviews scheduled for all employees across all departments."
+
+            for emp in employees:
+                review = PerformanceReview.objects.create(
+                    employee=emp,
+                    template=template,
+                    scheduled_date=scheduled_date,
+                    status='pending'
+                )
+                Notification.objects.create(
+                    recipient=emp,
+                    message=f"A new performance review has been scheduled for you on {scheduled_date}.",
+                    request_type='performance_review',
+                    request_id=str(review.id)
+                )
+            messages.success(request, message)
+
+        return redirect('employee_database')
+
+    return render(request, 'employee/schedule_performance_review.html', {
+        'form': form,
+        'dept_employee_map': dept_employee_map,
+    })
+
+@login_required
+def submit_performance_review(request, review_id):
+    review = get_object_or_404(PerformanceReview, id=review_id)
+    current_employee = get_object_or_404(Employee, eID=request.user.username)
+
+    # Only allow the employee being reviewed to submit the review
+    if current_employee != review.employee:
+        messages.error(request, "You are not authorized to submit this review.")
+        return redirect('dashboard')
+
+    # Prevent resubmission if the review is already completed
+    if review.status != 'pending':
+        messages.error(request, "This performance review has already been submitted.")
+        return redirect('dashboard')
+
+    questions = review.template.questions.all()
+    forms = [ReviewResponseForm(prefix=f"question-{question.id}", question=question) for question in questions]
+    
+    if request.method == 'POST':
+        forms = [ReviewResponseForm(request.POST, prefix=f"question-{question.id}", question=question) for question in questions]
+        all_valid = True
+        for form in forms:
+            if not form.is_valid():
+                all_valid = False
+                break
+        if all_valid:
+            # Save responses
+            for question, form in zip(questions, forms):
+                response = form.save(commit=False)
+                response.review = review
+                response.question = question
+                response.respondent = current_employee
+                response.response_type = 'employee'  # Always 'employee' since this is a self-assessment
+                response.save()
+
+            # Update review status to 'completed'
+            review.status = 'completed'
+            review.save()
+
+            # Notify HR personnel
+            hr_personnel = Employee.objects.filter(role='hr', is_active=True, is_archived=False)
+            for hr in hr_personnel:
+                Notification.objects.create(
+                    recipient=hr,
+                    message=f"Performance review for {review.employee} scheduled on {review.scheduled_date} has been completed.",
+                    request_type='performance_review',
+                    request_id=str(review.id)
+                )
+
+            messages.success(request, "Your performance review has been submitted successfully.")
+            return redirect('dashboard')
+
+    question_form_pairs = zip(questions, forms)
+
+    return render(request, 'employee/submit_performance_review.html', {
+        'review': review,
+        'question_form_pairs': question_form_pairs,
+        'response_type': 'employee',  # Always 'employee' in the template
+    })
+
+@login_required
+def view_performance_reviews(request):
+    current_employee = get_object_or_404(Employee, eID=request.user.username)
+    reviews = PerformanceReview.objects.filter(employee=current_employee).order_by('-scheduled_date')
+    return render(request, 'employee/view_performance_reviews.html', {'reviews': reviews})
+
+@login_required
+def performance_review_detail(request, review_id):
+    review = get_object_or_404(PerformanceReview, id=review_id)
+    current_employee = get_object_or_404(Employee, eID=request.user.username)
+
+    if current_employee != review.employee and current_employee.role not in ['manager', 'hr', 'admin']:
+        messages.error(request, "You are not authorized to view this review.")
+        return redirect('dashboard')
+
+    responses = review.responses.all()
+    analysis = {
+        'rating_summary': {'positive': 0, 'neutral': 0, 'negative': 0},
+        'text_sentiments': [],
+        'average_rating': None,
+        'feedback_summary': [],
+    }
+
+    if current_employee.role in ['hr', 'admin']:
+        ratings = [r.rating for r in responses if r.rating is not None]
+        for rating in ratings:
+            if rating >= 4:
+                analysis['rating_summary']['positive'] += 1
+            elif rating == 3:
+                analysis['rating_summary']['neutral'] += 1
+            else:
+                analysis['rating_summary']['negative'] += 1
+        analysis['average_rating'] = sum(ratings) / len(ratings) if ratings else None
+
+        for response in responses:
+            if response.text_response:
+                sentiment = analyze_sentiment(response.text_response)
+                analysis['text_sentiments'].append({
+                    'question': response.question.question_text,
+                    'response': response.text_response,
+                    'sentiment': sentiment,
+                })
+                if response.response_type == 'employee':
+                    analysis['feedback_summary'].append(response.text_response)
+
+    return render(request, 'employee/performance_review_detail.html', {
+        'review': review,
+        'responses': responses,
+        'analysis': analysis if current_employee.role in ['hr', 'admin'] else None,
+    })
+
+@login_required
+@role_required('hr', 'admin')
+def view_submitted_reviews(request):
+    reviews = PerformanceReview.objects.filter(
+        status='completed'  # Only show completed reviews
+    ).order_by('-scheduled_date')
+    return render(request, 'employee/view_submitted_reviews.html', {'reviews': reviews})
+
+
+@login_required
+@role_required('hr', 'admin')
+def custom_report_builder(request):
+    form = CustomReportForm(request.POST or None)
+    results = None
+    headers = None
+    aggregation_result = None
+    current_employee = Employee.objects.get(eID=request.user.username)
+
+    if request.method == 'POST' and form.is_valid():
+        model_name = form.cleaned_data['model']
+        selected_fields = form.cleaned_data['fields']
+        AuditLog.objects.create(
+            action_type='other',
+            action='Generated Custom Report',
+            performed_by=current_employee,
+            details=f'User generated a custom report for model {model_name} with fields {", ".join(selected_fields)}.'
+        )
+
+        model_name = form.cleaned_data['model']
+        selected_fields = form.cleaned_data['fields']
+        date_field = form.cleaned_data['date_field']
+        start_date = form.cleaned_data['start_date']
+        end_date = form.cleaned_data['end_date']
+        status_field = form.cleaned_data['status_field']
+        status_value = form.cleaned_data['status_value']
+        aggregation = form.cleaned_data['aggregation']
+        aggregation_field = form.cleaned_data['aggregation_field']
+
+        model = apps.get_model('employee', model_name)
+        queryset = model.objects.all()
+
+        # Apply filters
+        if date_field and start_date:
+            queryset = queryset.filter(**{f"{date_field}__gte": start_date})
+        if date_field and end_date:
+            queryset = queryset.filter(**{f"{date_field}__lte": end_date})
+        if status_field and status_value:
+            queryset = queryset.filter(**{status_field: status_value})
+        if form.cleaned_data['department']:
+            if model_name in ['Employee', 'Attendance', 'LeaveRequest', 'PerformanceReview', 'WorkAssignments']:
+                if model_name == 'Employee':
+                    queryset = queryset.filter(department=form.cleaned_data['department'])
+                elif model_name == 'Attendance':
+                    queryset = queryset.filter(eId__department=form.cleaned_data['department'])
+                elif model_name == 'LeaveRequest':
+                    queryset = queryset.filter(requester__department=form.cleaned_data['department'])
+                elif model_name == 'PerformanceReview':
+                    queryset = queryset.filter(employee__department=form.cleaned_data['department'])
+                elif model_name == 'WorkAssignments':
+                    queryset = queryset.filter(taskerId__department=form.cleaned_data['department'])
+        if form.cleaned_data['is_urgent'] and model_name == 'Notice':
+            queryset = queryset.filter(is_urgent=True)
+        if form.cleaned_data['feedback_satisfactory'] and model_name == 'WorkAssignments':
+            queryset = queryset.filter(feedback_satisfactory=True)
+
+        # Fetch results
+        results = queryset.values(*selected_fields)
+
+        # Apply aggregation
+        if aggregation and aggregation_field:
+            if aggregation == 'count':
+                aggregation_result = {f"{aggregation_field} Count": queryset.count()}
+            elif aggregation == 'avg':
+                aggregation_result = queryset.aggregate(avg=Avg(aggregation_field))
+                aggregation_result = {f"{aggregation_field} Average": aggregation_result['avg']}
+
+        # Prepare headers for display
+        headers = [model._meta.get_field(field).verbose_name or field.replace('_', ' ').title() for field in selected_fields]
+
+        # Export as PDF
+        if 'export_pdf' in request.GET:
+            AuditLog.objects.create(
+                action_type='other',
+                action='Exported Custom Report as PDF',
+                performed_by=current_employee,
+                details=f'User exported a custom report for model {model_name} with fields {", ".join(selected_fields)} as PDF.'
+            )
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            elements = []
+
+            styles = getSampleStyleSheet()
+            elements.append(Paragraph(f"Custom Report: {model_name}", styles['Title']))
+            elements.append(Spacer(1, 12))
+
+            # Report Data
+            data = [headers]
+            for row in results:
+                data.append([str(row[field]) for field in selected_fields])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 14),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 12))
+
+            # Aggregation Result
+            if aggregation_result:
+                elements.append(Paragraph("Aggregation Result", styles['Heading2']))
+                for key, value in aggregation_result.items():
+                    elements.append(Paragraph(f"{key}: {value:.2f}", styles['Normal']))
+                elements.append(Spacer(1, 12))
+
+            doc.build(elements)
+            buffer.seek(0)
+            response = HttpResponse(buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.pdf"'
+            return response
+
+        # Export as CSV
+        if 'export' in request.GET:
+            AuditLog.objects.create(
+                action_type='other',
+                action='Exported Custom Report',
+                performed_by=current_employee,
+                details=f'User exported a custom report for model {model_name} with fields {", ".join(selected_fields)} as CSV.'
+            )
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow(headers)
+            for row in results:
+                writer.writerow([row[field] for field in selected_fields])
+            if aggregation_result:
+                writer.writerow([])
+                writer.writerow(['Aggregation'])
+                for key, value in aggregation_result.items():
+                    writer.writerow([key, value])
+            return response
+
+    return render(request, 'employee/custom_report_builder.html', {
+        'form': form,
+        'results': results,
+        'headers': headers,
+        'aggregation_result': aggregation_result,
+    })

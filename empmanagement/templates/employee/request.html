@@ -5,39 +5,59 @@
     <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold text-gray-800 mb-6">Make a Request</h1>
 
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <!-- Form to Submit a New Request -->
         <div class="bg-white p-6 rounded-xl shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">Submit a New Request</h2>
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="mb-4">
-                    <label for="id_request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
-                    {{ requestForm.request_type }}
-                    {% if requestForm.request_type.errors %}
-                        <p class="text-red-600 text-sm">{{ requestForm.request_type.errors }}</p>
-                    {% endif %}
-                </div>
-                <div class="mb-4">
-                    <label for="id_request_message" class="block text-sm font-medium text-gray-700">Request Message</label>
-                    {{ requestForm.request_message }}
-                    {% if requestForm.request_message.errors %}
-                        <p class="text-red-600 text-sm">{{ requestForm.request_message.errors }}</p>
-                    {% endif %}
-                </div>
-                <div class="mb-4">
-                    <label for="id_request_date" class="block text-sm font-medium text-gray-700">Request Date</label>
-                    {{ requestForm.request_date }}
-                    {% if requestForm.request_date.errors %}
-                        <p class="text-red-600 text-sm">{{ requestForm.request_date.errors }}</p>
-                    {% endif %}
-                </div>
-                <div class="mb-4">
-                    <label for="id_destination_employee" class="block text-sm font-medium text-gray-700">Recipient (optional)</label>
-                    {{ requestForm.destination_employee }}
-                    {% if requestForm.destination_employee.errors %}
-                        <p class="text-red-600 text-sm">{{ requestForm.destination_employee.errors }}</p>
-                    {% endif %}
-                    <p class="text-sm text-gray-500">If not selected, the request will be sent to the default recipient based on your role.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="id_request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
+                        {{ requestForm.request_type }}
+                        {% if requestForm.request_type.errors %}
+                            <p class="text-red-600 text-sm">{{ requestForm.request_type.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_destination_employee" class="block text-sm font-medium text-gray-700">Recipient</label>
+                        {{ requestForm.destination_employee }}
+                        {% if requestForm.destination_employee.errors %}
+                            <p class="text-red-600 text-sm">{{ requestForm.destination_employee.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="mb-4 md:col-span-2">
+                        <label for="id_request_message" class="block text-sm font-medium text-gray-700">Request Message</label>
+                        {{ requestForm.request_message }}
+                        {% if requestForm.request_message.errors %}
+                            <p class="text-red-600 text-sm">{{ requestForm.request_message.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_request_date" class="block text-sm font-medium text-gray-700">Request Date</label>
+                        {{ requestForm.request_date }}
+                        {% if requestForm.request_date.errors %}
+                            <p class="text-red-600 text-sm">{{ requestForm.request_date.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_request_file" class="block text-sm font-medium text-gray-700">Attach File (Optional)</label>
+                        {{ requestForm.request_file }}
+                        {% if requestForm.request_file.errors %}
+                            <p class="text-red-600 text-sm">{{ requestForm.request_file.errors }}</p>
+                        {% endif %}
+                    </div>
                 </div>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit Request</button>
             </form>
@@ -50,7 +70,7 @@
                 <div class="space-y-4">
                     {% for req in user_requests %}
                         <div class="border-b pb-3">
-                            <p class="font-medium">{{ req.request_type|title }} - <span class="{% if req.status == 'pending' %}text-yellow-600{% elif req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}</span></p>
+                            <p class="font-medium">{{ req.request_type|title }} - <span class="{% if req.status == 'pending' %}text-yellow-600{% elif req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}{% if req.is_locked %} (Locked){% endif %}</span></p>
                             <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
                             <p class="text-sm text-gray-500">Submitted on: {{ req.request_date|date:"Y-m-d H:i" }}</p>
                             <p class="text-sm text-gray-500">To: {{ req.destination_employee }}</p>

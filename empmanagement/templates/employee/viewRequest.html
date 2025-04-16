@@ -10,7 +10,8 @@
         {% if messages %}
             <div class="mb-6">
                 {% for message in messages %}
-                    <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -39,12 +40,16 @@
                                     </p>
                                     <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
                                     <p class="text-sm text-gray-500">Submitted by: {{ req.requester }} on {{ req.request_date|date:"Y-m-d H:i" }}</p>
+                                    {% if req.feedback %}
+                                        <p class="text-sm text-gray-500">Feedback: {{ req.feedback|truncatewords:20 }}</p>
+                                    {% endif %}
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <form method="post" class="inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="request_id" value="{{ req.Id }}">
                                         <input type="hidden" name="request_type" value="{% if req|is_leave_request %}leave_request{% else %}general_request{% endif %}">
+                                        <textarea name="feedback" rows="1" class="w-48 p-1 border rounded-md mr-2" placeholder="Optional feedback"></textarea>
                                         <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition duration-200">
                                             Approve
                                         </button>
@@ -55,6 +60,15 @@
                                         <input type="hidden" name="request_type" value="{% if req|is_leave_request %}leave_request{% else %}general_request{% endif %}">
                                         <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200">
                                             Reject
+                                        </button>
+                                    </form>
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ req.Id }}">
+                                        <input type="hidden" name="request_type" value="{% if req|is_leave_request %}leave_request{% else %}general_request{% endif %}">
+                                        <textarea name="feedback" rows="1" class="w-48 p-1 border rounded-md mr-2" placeholder="Provide feedback"></textarea>
+                                        <button type="submit" name="action" value="feedback" class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition duration-200">
+                                            Seek Clarification
                                         </button>
                                     </form>
                                     <a href="{% if req|is_leave_request %}{% url 'leave_request_details' rid=req.Id %}{% else %}{% url 'requestdetails' rid=req.Id %}{% endif %}" class="text-blue-600 hover:underline">Review</a>
@@ -98,10 +112,13 @@
                                             {% elif req.request_type == 'approval' %}Approval Request
                                             {% else %}Other Request{% endif %}
                                         {% endif %}
-                                        - <span class="{% if req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}</span>
+                                        - <span class="{% if req.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}">{{ req.status|title }}{% if req.is_locked %} (Locked){% endif %}</span>
                                     </p>
                                     <p class="text-sm text-gray-500">{{ req.request_message|truncatewords:20 }}</p>
                                     <p class="text-sm text-gray-500">Submitted by: {{ req.requester }} on {{ req.request_date|date:"Y-m-d H:i" }}</p>
+                                    {% if req.feedback %}
+                                        <p class="text-sm text-gray-500">Feedback: {{ req.feedback|truncatewords:20 }}</p>
+                                    {% endif %}
                                 </div>
                                 <a href="{% if req|is_leave_request %}{% url 'leave_request_details' rid=req.Id %}{% else %}{% url 'requestdetails' rid=req.Id %}{% endif %}" class="text-blue-600 hover:underline">View Details</a>
                             </div>

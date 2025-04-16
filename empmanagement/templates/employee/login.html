@@ -17,6 +17,18 @@
             <p class="text-gray-500 mt-2">Employee Tracking System</p>
         </div>
         
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <!-- Login Container -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="bg-indigo-600 text-white px-6 py-4">
@@ -67,7 +79,7 @@
         
         <!-- Footer -->
         <div class="text-center mt-8 text-sm text-gray-500">
-            <p>&copy; 2025 Employee Tracking System. All rights reserved.</p>
+            <p>© 2025 Employee Tracking System. All rights reserved.</p>
         </div>
     </div>
 </body>

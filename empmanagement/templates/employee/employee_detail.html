@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Employee Details: {{ employee.eID }}</h1>
+        <div class="flex space-x-3">
+            <a href="{% url 'employee_database' %}" class="text-blue-600 hover:text-blue-800 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Employee Database
+            </a>
+            <a href="{% url 'export_employee_detail' eID=employee.eID %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all flex items-center">
+                <i class="fas fa-download mr-2"></i> Export Profile
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                    <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Employee Info -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Personal Information</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><strong>EID:</strong> {{ employee.eID }}</div>
+            <div><strong>Name:</strong> {{ employee.firstName }} {{ employee.middleName }} {{ employee.lastName }}</div>
+            <div><strong>Email:</strong> {{ employee.email }}</div>
+            <div><strong>Phone:</strong> {{ employee.phoneNo }}</div>
+            <div><strong>Aadhar No:</strong> {{ employee.addharNo }}</div>
+            <div><strong>Date of Birth:</strong> {{ employee.dOB|date:"Y-m-d" }}</div>
+            <div><strong>Designation:</strong> {{ employee.designation }}</div>
+            <div><strong>Department:</strong> {{ employee.department.name|default:"—" }}</div>
+            <div><strong>Role:</strong> {{ employee.get_role_display }}</div>
+            <div><strong>Salary:</strong> {{ employee.salary }}</div>
+            <div><strong>Join Date:</strong> {{ employee.joinDate|date:"Y-m-d" }}</div>
+            <div><strong>Status:</strong>
+                {% if employee.is_active and not employee.is_archived %}Active
+                {% elif employee.is_archived %}Archived
+                {% else %}Inactive{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Contacts -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Emergency Contacts</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Name</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Relationship</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Phone</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Email</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for contact in employee.emergency_contacts.all %}
+                        <tr class="hover:bg-gray-50 transition-all">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.relationship }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.phone_no }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.email|default:"—" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                No emergency contacts found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Role Change History -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Role Change History</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Old Role</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">New Role</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Changed By</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Changed At</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for log in role_history %}
+                        <tr class="hover:bg-gray-50 transition-all">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.old_role|title }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.new_role|title }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_by.firstName }} {{ log.changed_by.lastName }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                No role change history found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Documents (Read-Only for HR) -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Documents</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Title</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Type</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Uploaded At</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Sensitive</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for doc in employee.documents.all %}
+                        <tr class="hover:bg-gray-50 transition-all">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.title }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.get_document_type_display }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {% if doc.is_sensitive %}
+                                    <span class="text-red-600">Yes</span>
+                                {% else %}
+                                    <span class="text-green-600">No</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {% if not doc.is_sensitive %}
+                                    <a href="{{ doc.file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-download mr-1"></i>Download
+                                    </a>
+                                {% else %}
+                                    <span class="text-gray-500">Restricted</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                No documents found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

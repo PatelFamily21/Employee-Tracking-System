@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Submit Performance Review - {{ response_type|title }}</h2>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Review for {{ review.employee }} on {{ review.scheduled_date }}</h2>
+            </div>
+            
+            <div class="p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    {% for question, form in question_form_pairs %}
+                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-md font-medium text-gray-800 mb-4">{{ question.question_text }}</h3>
+                        <p class="text-sm text-gray-500 mb-4"><i class="fas fa-info-circle mr-2"></i>{{ question.question_type|title }} Question</p>
+                        
+                        {% if question.question_type == 'rating' %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rating (1-5)</label>
+                            <div class="flex items-center space-x-1 star-rating" data-prefix="{{ form.prefix }}">
+                                {% for i in "54321" %}
+                                <i class="fas fa-star text-gray-300 cursor-pointer hover:text-yellow-400" data-value="{{ i }}"></i>
+                                {% endfor %}
+                                {{ form.rating }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Response</label>
+                            {{ form.text_response }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600">No questions available for this review.</p>
+                    {% endfor %}
+                    
+                    <div class="flex mt-8">
+                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i class="fas fa-paper-plane mr-2"></i>Submit Responses
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.star-rating .fa-star.selected {
+    color: #facc15; /* Tailwind yellow-400 equivalent */
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.star-rating').forEach(ratingContainer => {
+        const stars = ratingContainer.querySelectorAll('.fa-star');
+        const ratingInput = ratingContainer.querySelector('input[name$="-rating"]');
+        
+        // Hide the default number input
+        ratingInput.style.display = 'none';
+
+        // Set initial rating if value exists
+        let currentRating = parseInt(ratingInput.value) || 0;
+        updateStars(currentRating);
+
+        stars.forEach(star => {
+            star.addEventListener('mouseover', function() {
+                const value = parseInt(this.dataset.value);
+                updateStars(value, true);
+            });
+
+            star.addEventListener('mouseout', function() {
+                updateStars(currentRating);
+            });
+
+            star.addEventListener('click', function() {
+                currentRating = parseInt(this.dataset.value);
+                ratingInput.value = currentRating;
+                updateStars(currentRating);
+            });
+        });
+
+        function updateStars(rating, hover = false) {
+            stars.forEach(star => {
+                const starValue = parseInt(star.dataset.value);
+                if (starValue <= rating) {
+                    star.classList.add('selected');
+                } else {
+                    star.classList.remove('selected');
+                }
+                // Add hover effect
+                star.classList.toggle('text-yellow-400', hover && starValue <= rating);
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
