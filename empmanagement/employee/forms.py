@@ -4,6 +4,18 @@ from .models import WorkAssignments, Requests, Employee
 
 from datetime import datetime, timezone, time
 from django.utils import timezone
+# employee/forms.py
+from django import forms
+from .models import PerformanceReviewTemplate, ReviewQuestion, PerformanceReview, ReviewResponse
+
+from django import forms
+from .models import PerformanceReviewTemplate, ReviewQuestion, PerformanceReview, ReviewResponse, Department, Employee
+
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import PerformanceReviewTemplate, ReviewQuestion, PerformanceReview, ReviewResponse, Department, Employee
+
+
 class workform(forms.ModelForm):
     department = forms.ChoiceField(choices=[], required=False)
 
@@ -297,9 +309,6 @@ class NoticeForm(forms.ModelForm):
         self.fields['publishDate'].input_formats = ['%Y-%m-%dT%H:%M']  # For datetime-local input
 
 
-# employee/forms.py
-from django import forms
-from .models import PerformanceReviewTemplate, ReviewQuestion, PerformanceReview, ReviewResponse
 
 from django import forms
 from .models import PerformanceReviewTemplate, ReviewQuestion, PerformanceReview, ReviewResponse, Department, Employee
@@ -325,7 +334,7 @@ class ReviewQuestionForm(forms.ModelForm):
 class PerformanceReviewScheduleForm(forms.ModelForm):
     department = forms.ModelChoiceField(
         queryset=Department.objects.all(),
-        required=True,  # Make department required
+        required=False,  # Make department optional to allow "All Departments"
         widget=forms.Select(attrs={'class': 'w-full', 'id': 'id_department'}),
         empty_label="All Departments",  # Allow selecting "All Departments"
         help_text="Select a department to schedule reviews for its employees. Select 'All Departments' to schedule for all employees."
@@ -350,7 +359,7 @@ class PerformanceReviewScheduleForm(forms.ModelForm):
         department = cleaned_data.get('department')
 
         # Validate that the selected employee belongs to the selected department
-        if employee and department:
+        if employee and department:  # Only validate if both are selected
             if employee.department != department:
                 raise forms.ValidationError("The selected employee does not belong to the selected department.")
 
@@ -366,16 +375,34 @@ class ReviewResponseForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        question = kwargs.pop('question', None)
+        self.question = kwargs.pop('question', None)
         super().__init__(*args, **kwargs)
-        if question:
-            if question.question_type == 'rating':
+        if self.question:
+            if self.question.question_type == 'rating':
                 self.fields['text_response'].widget = forms.HiddenInput()
             else:
                 self.fields['rating'].widget = forms.HiddenInput()
 
+    def clean(self):
+        cleaned_data = super().clean()
+        rating = cleaned_data.get('rating')
+        text_response = cleaned_data.get('text_response')
 
-# employee/forms.py
+        if not self.question:
+            raise forms.ValidationError("No question associated with this response.")
+
+        if self.question.question_type == 'rating':
+            if rating is None:
+                self.add_error('rating', "A rating is required for this question.")
+            elif not (1 <= rating <= 5):
+                self.add_error('rating', "Rating must be between 1 and 5.")
+        else:  # question_type == 'text'
+            if not text_response or text_response.strip() == '':
+                self.add_error('text_response', "A text response is required for this question.")
+
+        return cleaned_data
+
+
 from django import forms
 from django.apps import apps
 from django.db import models
@@ -390,12 +417,16 @@ class CustomReportForm(forms.Form):
         ('WorkAssignments', 'Work Assignments'),
         ('RoleChangeLog', 'Role Change Log'),
         ('Notice', 'Notices'),
+        ('Document', 'Documents'),  # Added Document model
     ]
 
     AGGREGATION_CHOICES = [
         ('', 'None'),
         ('count', 'Count'),
         ('avg', 'Average'),
+        ('sum', 'Sum'),
+        ('min', 'Minimum'),
+        ('max', 'Maximum'),
     ]
 
     model = forms.ChoiceField(choices=MODEL_CHOICES, label="Select Model")
@@ -415,13 +446,21 @@ class CustomReportForm(forms.Form):
     is_urgent = forms.BooleanField(label="Urgent Notices Only", required=False)
     feedback_satisfactory = forms.BooleanField(label="Satisfactory Feedback Only", required=False)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, request=None, **kwargs):
+        self.request = request  # Store request to access user role
         super().__init__(*args, **kwargs)
         model_name = self.data.get('model') if self.data else self.initial.get('model', 'Employee')
         if model_name:
             model = apps.get_model('employee', model_name)
-            # Dynamically set field choices
-            field_choices = [(f.name, f.verbose_name or f.name.replace('_', ' ').title()) for f in model._meta.fields]
+            
+            # Dynamically set field choices, excluding sensitive fields for non-HR/admin
+            current_employee = Employee.objects.get(eID=self.request.user.username) if self.request else None
+            field_choices = []
+            for f in model._meta.fields:
+                # Skip sensitive fields for non-HR/admin users
+                if model_name == 'Document' and f.name == 'file' and current_employee and current_employee.role not in ['hr', 'admin']:
+                    continue
+                field_choices.append((f.name, f.verbose_name or f.name.replace('_', ' ').title()))
             self.fields['fields'].choices = field_choices
 
             # Date fields for filtering
@@ -446,3 +485,30 @@ class CustomReportForm(forms.Form):
             self.fields['department'].widget.attrs['class'] = 'department-filter hidden' if model_name not in ['Employee', 'Attendance', 'LeaveRequest', 'PerformanceReview', 'WorkAssignments'] else 'department-filter'
             self.fields['is_urgent'].widget.attrs['class'] = 'is-urgent-filter hidden' if model_name != 'Notice' else 'is-urgent-filter'
             self.fields['feedback_satisfactory'].widget.attrs['class'] = 'feedback-satisfactory-filter hidden' if model_name != 'WorkAssignments' else 'feedback-satisfactory-filter'
+
+
+from django import forms
+from .models import IssueReport
+
+class IssueReportForm(forms.ModelForm):
+    class Meta:
+        model = IssueReport
+        fields = ['title', 'description', 'category', 'attachment']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'w-full border rounded p-2'}),
+            'category': forms.Select(attrs={'class': 'w-full border rounded p-2'}),
+            'attachment': forms.ClearableFileInput(attrs={'class': 'w-full border rounded p-2'}),
+            'title': forms.TextInput(attrs={'class': 'w-full border rounded p-2'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        title = cleaned_data.get('title')
+        description = cleaned_data.get('description')
+
+        if not title or len(title.strip()) < 5:
+            raise forms.ValidationError("Title must be at least 5 characters long.")
+        if not description or len(description.strip()) < 10:
+            raise forms.ValidationError("Description must be at least 10 characters long.")
+
+        return cleaned_data

@@ -68,6 +68,28 @@ from .models import (
     WorkAssignmentLog,
     role_choices,
 )
+import io
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
+from django.db.models import Count, Q, F, Avg
+from django.utils import timezone
+from datetime import timedelta
+import csv
+from collections import defaultdict
+from django.utils.timezone import make_naive
+from .decorators import role_required
+from .forms import CustomReportForm, PerformanceReviewTemplateForm, ReviewQuestionForm, PerformanceReviewScheduleForm, ReviewResponseForm
+from .models import Employee, Attendance, LeaveRequest, PerformanceReview, ReviewResponse, WorkAssignments, RoleChangeLog, PendingRoleChange, AuditLog, PerformanceReviewTemplate, ReviewQuestion, Notification, Department
+from django.apps import apps
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from django.contrib import messages
+from django.forms import formset_factory
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def dashboard(request):
@@ -1267,97 +1289,142 @@ def employee_detail(request, eID):
     }
     return render(request, 'employee/employee_detail.html', context)
 
+@login_required
 @role_required('hr', 'admin')
 def export_employee_data(request):
-    department_id = request.GET.get('department_id')
-    role = request.GET.get('role')
-    status = request.GET.get('status')
-    
-    employees = Employee.objects.select_related('department').order_by('eID')
-    
-    if department_id:
-        employees = employees.filter(department__dept_id=department_id)
-    if role:
-        employees = employees.filter(role=role)
-    if status:
-        if status == 'active':
-            employees = employees.filter(is_active=True, is_archived=False)
-        elif status == 'inactive':
-            employees = employees.filter(is_active=False)
-        elif status == 'archived':
-            employees = employees.filter(is_archived=True)
-    
-    # Create PDF
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    elements.append(Paragraph("Employee Data Report", styles['Title']))
-    elements.append(Spacer(1, 12))
-    
-    # Filters applied
-    filter_text = "Filters: "
-    filters = []
-    if department_id:
-        dept = Department.objects.get(dept_id=department_id)
-        filters.append(f"Department: {dept.name}")
-    if role:
-        role_display = dict(Employee._meta.get_field('role').choices).get(role, role)
-        filters.append(f"Role: {role_display}")
-    if status:
-        status_display = {'active': 'Active', 'inactive': 'Inactive', 'archived': 'Archived'}.get(status, status)
-        filters.append(f"Status: {status_display}")
-    filter_text += ", ".join(filters) if filters else "None"
-    elements.append(Paragraph(filter_text, styles['Normal']))
-    elements.append(Spacer(1, 12))
-    
-    # Table data
-    data = [['EID', 'Name', 'Department', 'Role', 'Email', 'Phone', 'Join Date', 'Status']]
-    for emp in employees:
-        status = 'Active' if emp.is_active and not emp.is_archived else 'Inactive' if not emp.is_archived else 'Archived'
-        data.append([
-            emp.eID,
-            f"{emp.firstName} {emp.lastName}",
-            emp.department.name if emp.department else '—',
-            dict(role_choices).get(emp.role, emp.role),
-            emp.email,
-            emp.phoneNo,
-            emp.joinDate.strftime('%Y-%m-%d'),
-            status,
-        ])
-    
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    
-    elements.append(table)
-    doc.build(elements)
-    
-    buffer.seek(0)
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="employee_data_report.pdf"'
+    """
+    Export employee data as a PDF file with a properly formatted table.
+    Only accessible to HR and admin roles.
+    """
+    current_employee = Employee.objects.get(eID=request.user.username)
     
     # Log the export action
-    performed_by = Employee.objects.filter(eID=request.user.username).first()
     AuditLog.objects.create(
         action_type='other',
-        action="Exported Employee Data",
-        performed_by=performed_by,
-        details=f"Filters - Department: {department_id or 'All'}, Role: {role or 'All'}, Status: {status or 'All'}"
+        action='Exported Employee Data as PDF',
+        performed_by=current_employee,
+        details='User exported employee data as PDF.'
     )
-    
+
+    # Fetch all active employees
+    employees = Employee.objects.filter(is_active=True, is_archived=False).order_by('eID')
+
+    # Create the PDF response
+    buffer = io.BytesIO()
+    # Use A4 landscape to accommodate more columns
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(A4[1], A4[0]),  # Landscape orientation (swap width and height)
+        leftMargin=0.5*inch,
+        rightMargin=0.5*inch,
+        topMargin=0.5*inch,
+        bottomMargin=0.5*inch
+    )
+    elements = []
+
+    # Define styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Title']
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=styles['Normal'],
+        fontSize=8,  # Smaller font size to fit content
+        leading=9,
+        alignment=TA_CENTER,
+        wordWrap='CJK',  # Enable word wrapping
+    )
+
+    # Add title
+    elements.append(Paragraph("Employee Data Export", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Define column widths (total page width in landscape A4 is ~11.69 inches)
+    # After margins (0.5 inch each side), usable width is ~10.69 inches
+    # 8 columns: EID, Name, Department, Role, Email, Phone, Join Date, Status
+    col_widths = [
+        0.8*inch,  # EID
+        1.5*inch,  # Name
+        1.5*inch,  # Department
+        1.0*inch,  # Role
+        2.0*inch,  # Email (longer to accommodate email addresses)
+        1.2*inch,  # Phone
+        1.2*inch,  # Join Date
+        0.8*inch,  # Status
+    ]
+
+    # Define row heights
+    rows_per_page = 20  # Number of rows per page (including header)
+    row_heights = [0.3*inch] + [0.5*inch] * (rows_per_page - 1)  # Header: 0.3 inch, Data rows: 0.5 inch
+
+    # Prepare table data
+    data = [['EID', 'Name', 'Department', 'Role', 'Email', 'Phone', 'Join Date', 'Status']]
+    row_count = 1  # Start with header row
+
+    for employee in employees:
+        # Combine first and last name
+        name = f"{employee.firstName} {employee.lastName}"
+        # Get department name or default
+        department = employee.department.name if employee.department else 'No Department'
+        # Get status
+        status = 'Active' if employee.is_active and not employee.is_archived else 'Inactive'
+        # Prepare row data
+        row = [
+            Paragraph(str(employee.eID), cell_style),
+            Paragraph(name, cell_style),
+            Paragraph(department, cell_style),
+            Paragraph(employee.role.title(), cell_style),
+            Paragraph(employee.email or '', cell_style),
+            Paragraph(employee.phoneNo or '', cell_style),
+            Paragraph(str(employee.joinDate), cell_style),
+            Paragraph(status, cell_style),
+        ]
+        data.append(row)
+        row_count += 1
+
+        # If we've reached the row limit for the page, create a table and start a new page
+        if row_count >= rows_per_page:
+            table = Table(data, colWidths=col_widths, rowHeights=row_heights, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ]))
+            elements.append(table)
+            elements.append(PageBreak())
+            # Reset data for the next page, starting with the header
+            data = [['EID', 'Name', 'Department', 'Role', 'Email', 'Phone', 'Join Date', 'Status']]
+            row_count = 1
+
+    # Add the remaining rows (if any) to a final table
+    if len(data) > 1:  # Check if there are rows beyond the header
+        # Adjust row heights for the remaining rows
+        remaining_rows = len(data)
+        row_heights = [0.3*inch] + [0.5*inch] * (remaining_rows - 1)
+        table = Table(data, colWidths=col_widths, rowHeights=row_heights, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ]))
+        elements.append(table)
+
+    # Build the PDF
+    doc.build(elements)
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="employee_data.pdf"'
     return response
 
 
@@ -1374,30 +1441,45 @@ def export_employee_detail(request, eID):
     
     # Create PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(A4[1], A4[0]),  # Landscape orientation
+        leftMargin=0.5*inch,
+        rightMargin=0.5*inch,
+        topMargin=0.5*inch,
+        bottomMargin=0.5*inch
+    )
     elements = []
     
     styles = getSampleStyleSheet()
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=9,
+        wordWrap='CJK',  # Enable text wrapping
+    )
     elements.append(Paragraph(f"Employee Profile: {employee.eID}", styles['Title']))
     elements.append(Spacer(1, 12))
     
     # Personal Information
     elements.append(Paragraph("Personal Information", styles['Heading2']))
+    personal_col_widths = [2.0*inch, 6.0*inch]  # Label: 2 inch, Value: 6 inch
     personal_data = [
-        ['EID', employee.eID],
-        ['Name', f"{employee.firstName} {employee.middleName} {employee.lastName}"],
-        ['Email', employee.email],
-        ['Phone', employee.phoneNo],
-        ['Aadhar No', employee.addharNo],
-        ['Date of Birth', employee.dOB.strftime('%Y-%m-%d')],
-        ['Designation', employee.designation],
-        ['Department', employee.department.name if employee.department else '—'],
-        ['Role', dict(role_choices).get(employee.role, employee.role)],
-        ['Salary', employee.salary],
-        ['Join Date', employee.joinDate.strftime('%Y-%m-%d')],
-        ['Status', 'Active' if employee.is_active and not employee.is_archived else 'Inactive' if not employee.is_archived else 'Archived'],
+        ['EID', Paragraph(employee.eID, cell_style)],
+        ['Name', Paragraph(f"{employee.firstName} {employee.middleName} {employee.lastName}", cell_style)],
+        ['Email', Paragraph(employee.email, cell_style)],
+        ['Phone', Paragraph(employee.phoneNo, cell_style)],
+        ['Aadhar No', Paragraph(employee.addharNo, cell_style)],
+        ['Date of Birth', Paragraph(employee.dOB.strftime('%Y-%m-%d'), cell_style)],
+        ['Designation', Paragraph(employee.designation, cell_style)],
+        ['Department', Paragraph(employee.department.name if employee.department else '—', cell_style)],
+        ['Role', Paragraph(dict(role_choices).get(employee.role, employee.role), cell_style)],
+        ['Salary', Paragraph(str(employee.salary), cell_style)],
+        ['Join Date', Paragraph(employee.joinDate.strftime('%Y-%m-%d'), cell_style)],
+        ['Status', Paragraph('Active' if employee.is_active and not employee.is_archived else 'Inactive' if not employee.is_archived else 'Archived', cell_style)],
     ]
-    personal_table = Table(personal_data)
+    personal_table = Table(personal_data, colWidths=personal_col_widths, rowHeights=[0.3*inch]*len(personal_data))
     personal_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.grey),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
@@ -1411,17 +1493,18 @@ def export_employee_detail(request, eID):
     
     # Emergency Contacts
     elements.append(Paragraph("Emergency Contacts", styles['Heading2']))
+    emergency_col_widths = [2.0*inch, 1.5*inch, 1.5*inch, 3.0*inch]  # Name, Relationship, Phone, Email
     emergency_data = [['Name', 'Relationship', 'Phone', 'Email']]
     for contact in employee.emergency_contacts.all():
         emergency_data.append([
-            contact.name,
-            contact.relationship,
-            contact.phone_no,
-            contact.email or '—',
+            Paragraph(contact.name, cell_style),
+            Paragraph(contact.relationship, cell_style),
+            Paragraph(contact.phone_no, cell_style),
+            Paragraph(contact.email or '—', cell_style),
         ])
     if len(emergency_data) == 1:
         emergency_data.append(['No emergency contacts found.', '', '', ''])
-    emergency_table = Table(emergency_data)
+    emergency_table = Table(emergency_data, colWidths=emergency_col_widths, rowHeights=[0.3*inch]*len(emergency_data))
     emergency_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1435,17 +1518,18 @@ def export_employee_detail(request, eID):
     
     # Documents
     elements.append(Paragraph("Documents", styles['Heading2']))
+    document_col_widths = [3.0*inch, 2.0*inch, 2.0*inch]  # Title, Type, Uploaded At
     document_data = [['Title', 'Type', 'Uploaded At']]
     for document in employee.documents.all():
         if not document.is_sensitive or current_employee.role in ['hr', 'admin']:
             document_data.append([
-                document.title,
-                document.get_document_type_display(),
-                document.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                Paragraph(document.title, cell_style),
+                Paragraph(document.get_document_type_display(), cell_style),
+                Paragraph(document.uploaded_at.strftime('%Y-%m-%d %H:%M'), cell_style),
             ])
     if len(document_data) == 1:
         document_data.append(['No documents found.', '', ''])
-    document_table = Table(document_data)
+    document_table = Table(document_data, colWidths=document_col_widths, rowHeights=[0.3*inch]*len(document_data))
     document_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1459,17 +1543,18 @@ def export_employee_detail(request, eID):
     
     # Role Change History
     elements.append(Paragraph("Role Change History", styles['Heading2']))
+    role_col_widths = [2.0*inch, 2.0*inch, 2.0*inch, 2.0*inch]  # Old Role, New Role, Changed By, Changed At
     role_data = [['Old Role', 'New Role', 'Changed By', 'Changed At']]
     for log in RoleChangeLog.objects.filter(employee=employee).order_by('-changed_at'):
         role_data.append([
-            log.old_role.title(),
-            log.new_role.title(),
-            f"{log.changed_by.firstName} {log.changed_by.lastName}",
-            log.changed_at.strftime('%Y-%m-%d %H:%M'),
+            Paragraph(log.old_role.title(), cell_style),
+            Paragraph(log.new_role.title(), cell_style),
+            Paragraph(f"{log.changed_by.firstName} {log.changed_by.lastName}", cell_style),
+            Paragraph(log.changed_at.strftime('%Y-%m-%d %H:%M'), cell_style),
         ])
     if len(role_data) == 1:
         role_data.append(['No role changes found.', '', '', ''])
-    role_table = Table(role_data)
+    role_table = Table(role_data, colWidths=role_col_widths, rowHeights=[0.3*inch]*len(role_data))
     role_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -2465,6 +2550,28 @@ def issue_compulsory_leave(request):
 
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
+from django.db.models import Count, Q, F, Avg
+from django.utils import timezone
+from datetime import timedelta
+import csv
+from collections import defaultdict
+from django.utils.timezone import make_naive
+from .decorators import role_required
+from .forms import CustomReportForm, PerformanceReviewTemplateForm, ReviewQuestionForm, PerformanceReviewScheduleForm, ReviewResponseForm
+from .models import Employee, Attendance, LeaveRequest, PerformanceReview, ReviewResponse, WorkAssignments, RoleChangeLog, PendingRoleChange, AuditLog, PerformanceReviewTemplate, ReviewQuestion, Notification, Department
+from django.apps import apps
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+from django.contrib import messages
+from django.forms import formset_factory
+import io
+
 @login_required
 @role_required('hr', 'admin')
 def standard_hr_reports(request):
@@ -2530,14 +2637,14 @@ def standard_hr_reports(request):
     completion_rate = (completed_reviews / total_reviews * 100) if total_reviews > 0 else 0
 
     avg_ratings = ReviewResponse.objects.filter(
-        response_type='employee',  # Updated to use 'employee' since manager feedback is removed
+        response_type='employee',
         rating__isnull=False,
         review__status='completed'
     ).values('review__employee__eID', 'review__employee__firstName', 'review__employee__lastName') \
      .annotate(avg_rating=Avg('rating')).order_by('review__employee__eID')
 
     avg_ratings_by_dept = ReviewResponse.objects.filter(
-        response_type='employee',  # Updated to use 'employee'
+        response_type='employee',
         rating__isnull=False,
         review__status='completed'
     ).values('review__employee__department__name') \
@@ -3050,6 +3157,11 @@ def submit_performance_review(request, review_id):
         return redirect('dashboard')
 
     questions = review.template.questions.all()
+    if not questions:
+        messages.error(request, "This performance review has no questions to answer.")
+        return redirect('dashboard')
+
+    # Initialize forms for each question
     forms = [ReviewResponseForm(prefix=f"question-{question.id}", question=question) for question in questions]
     
     if request.method == 'POST':
@@ -3058,7 +3170,11 @@ def submit_performance_review(request, review_id):
         for form in forms:
             if not form.is_valid():
                 all_valid = False
-                break
+                # Add a message for each invalid form to help the user
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"Error in response for '{form.question.question_text}' ({field}): {error}")
+
         if all_valid:
             # Save responses
             for question, form in zip(questions, forms):
@@ -3066,7 +3182,7 @@ def submit_performance_review(request, review_id):
                 response.review = review
                 response.question = question
                 response.respondent = current_employee
-                response.response_type = 'employee'  # Always 'employee' since this is a self-assessment
+                response.response_type = 'employee'
                 response.save()
 
             # Update review status to 'completed'
@@ -3091,7 +3207,7 @@ def submit_performance_review(request, review_id):
     return render(request, 'employee/submit_performance_review.html', {
         'review': review,
         'question_form_pairs': question_form_pairs,
-        'response_type': 'employee',  # Always 'employee' in the template
+        'response_type': 'employee',
     })
 
 @login_required
@@ -3149,30 +3265,42 @@ def performance_review_detail(request, review_id):
 @role_required('hr', 'admin')
 def view_submitted_reviews(request):
     reviews = PerformanceReview.objects.filter(
-        status='completed'  # Only show completed reviews
+        status='completed'
     ).order_by('-scheduled_date')
     return render(request, 'employee/view_submitted_reviews.html', {'reviews': reviews})
 
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Avg, Sum, Min, Max, Count
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from io import BytesIO
+import csv
+import datetime
+from .forms import CustomReportForm
+from django.apps import apps
+from django.db import models
+from .models import Employee, Document, AuditLog
+
 @login_required
 @role_required('hr', 'admin')
 def custom_report_builder(request):
-    form = CustomReportForm(request.POST or None)
+    # Initialize variables
+    form = CustomReportForm(request.POST or None, request=request)
     results = None
-    headers = None
+    header_field_pairs = None  # Updated to store (header, field_name) pairs
     aggregation_result = None
     current_employee = Employee.objects.get(eID=request.user.username)
+    paginated_results = None
 
+    # Handle form submission
     if request.method == 'POST' and form.is_valid():
-        model_name = form.cleaned_data['model']
-        selected_fields = form.cleaned_data['fields']
-        AuditLog.objects.create(
-            action_type='other',
-            action='Generated Custom Report',
-            performed_by=current_employee,
-            details=f'User generated a custom report for model {model_name} with fields {", ".join(selected_fields)}.'
-        )
-
         model_name = form.cleaned_data['model']
         selected_fields = form.cleaned_data['fields']
         date_field = form.cleaned_data['date_field']
@@ -3182,9 +3310,44 @@ def custom_report_builder(request):
         status_value = form.cleaned_data['status_value']
         aggregation = form.cleaned_data['aggregation']
         aggregation_field = form.cleaned_data['aggregation_field']
+        department = form.cleaned_data['department']
+        is_urgent = form.cleaned_data['is_urgent']
+        feedback_satisfactory = form.cleaned_data['feedback_satisfactory']
 
+        # Log the report generation
+        filter_details = (
+            f"Model: {model_name}, Fields: {', '.join(selected_fields)}, "
+            f"Date Field: {date_field or 'None'}, Start Date: {start_date or 'None'}, End Date: {end_date or 'None'}, "
+            f"Status Field: {status_field or 'None'}, Status Value: {status_value or 'None'}, "
+            f"Department: {department.name if department else 'None'}, "
+            f"Is Urgent: {is_urgent}, Feedback Satisfactory: {feedback_satisfactory}"
+        )
+        AuditLog.objects.create(
+            action_type='other',
+            action='Generated Custom Report',
+            performed_by=current_employee,
+            details=filter_details
+        )
+
+        # Fetch the model and build the queryset
         model = apps.get_model('employee', model_name)
         queryset = model.objects.all()
+
+        # Apply optimizations for related fields
+        if model_name == 'Employee':
+            queryset = queryset.select_related('department')
+        elif model_name == 'Attendance':
+            queryset = queryset.select_related('eId__department')
+        elif model_name == 'LeaveRequest':
+            queryset = queryset.select_related('requester__department', 'destination_employee')
+        elif model_name == 'PerformanceReview':
+            queryset = queryset.select_related('employee__department', 'template')
+        elif model_name == 'WorkAssignments':
+            queryset = queryset.select_related('taskerId__department', 'assignerId')
+        elif model_name == 'RoleChangeLog':
+            queryset = queryset.select_related('employee', 'changed_by')
+        elif model_name == 'Notice':
+            queryset = queryset.select_related('posted_by').prefetch_related('departments')
 
         # Apply filters
         if date_field and start_date:
@@ -3193,108 +3356,309 @@ def custom_report_builder(request):
             queryset = queryset.filter(**{f"{date_field}__lte": end_date})
         if status_field and status_value:
             queryset = queryset.filter(**{status_field: status_value})
-        if form.cleaned_data['department']:
-            if model_name in ['Employee', 'Attendance', 'LeaveRequest', 'PerformanceReview', 'WorkAssignments']:
-                if model_name == 'Employee':
-                    queryset = queryset.filter(department=form.cleaned_data['department'])
-                elif model_name == 'Attendance':
-                    queryset = queryset.filter(eId__department=form.cleaned_data['department'])
-                elif model_name == 'LeaveRequest':
-                    queryset = queryset.filter(requester__department=form.cleaned_data['department'])
-                elif model_name == 'PerformanceReview':
-                    queryset = queryset.filter(employee__department=form.cleaned_data['department'])
-                elif model_name == 'WorkAssignments':
-                    queryset = queryset.filter(taskerId__department=form.cleaned_data['department'])
-        if form.cleaned_data['is_urgent'] and model_name == 'Notice':
+
+        # Department filtering (modularized)
+        if department:
+            department_filter_map = {
+                'Employee': {'field': 'department'},
+                'Attendance': {'field': 'eId__department'},
+                'LeaveRequest': {'field': 'requester__department'},
+                'PerformanceReview': {'field': 'employee__department'},
+                'WorkAssignments': {'field': 'taskerId__department'},
+            }
+            if model_name in department_filter_map:
+                queryset = queryset.filter(**{department_filter_map[model_name]['field']: department})
+
+        # Model-specific filters
+        if is_urgent and model_name == 'Notice':
             queryset = queryset.filter(is_urgent=True)
-        if form.cleaned_data['feedback_satisfactory'] and model_name == 'WorkAssignments':
+        if feedback_satisfactory and model_name == 'WorkAssignments':
             queryset = queryset.filter(feedback_satisfactory=True)
 
+        # Security: Filter sensitive data
+        if model_name == 'Document':
+            if current_employee.role not in ['hr', 'admin']:
+                queryset = queryset.filter(is_sensitive=False)
+
         # Fetch results
-        results = queryset.values(*selected_fields)
+        try:
+            results = queryset.values(*selected_fields)
+        except Exception as e:
+            messages.error(request, f"Error fetching results: {str(e)}")
+            results = []
 
         # Apply aggregation
         if aggregation and aggregation_field:
-            if aggregation == 'count':
-                aggregation_result = {f"{aggregation_field} Count": queryset.count()}
-            elif aggregation == 'avg':
-                aggregation_result = queryset.aggregate(avg=Avg(aggregation_field))
-                aggregation_result = {f"{aggregation_field} Average": aggregation_result['avg']}
+            try:
+                if aggregation == 'count':
+                    aggregation_result = {f"{aggregation_field} Count": queryset.count()}
+                elif aggregation == 'avg':
+                    agg = queryset.aggregate(avg=Avg(aggregation_field))['avg']
+                    aggregation_result = {f"{aggregation_field} Average": agg if agg is not None else 0}
+                elif aggregation == 'sum':
+                    agg = queryset.aggregate(sum=Sum(aggregation_field))['sum']
+                    aggregation_result = {f"{aggregation_field} Sum": agg if agg is not None else 0}
+                elif aggregation == 'min':
+                    agg = queryset.aggregate(min=Min(aggregation_field))['min']
+                    aggregation_result = {f"{aggregation_field} Minimum": agg if agg is not None else 0}
+                elif aggregation == 'max':
+                    agg = queryset.aggregate(max=Max(aggregation_field))['max']
+                    aggregation_result = {f"{aggregation_field} Maximum": agg if agg is not None else 0}
+            except Exception as e:
+                messages.error(request, f"Error calculating aggregation: {str(e)}")
+                aggregation_result = {}
 
-        # Prepare headers for display
-        headers = [model._meta.get_field(field).verbose_name or field.replace('_', ' ').title() for field in selected_fields]
+        # Prepare headers and field names for display
+        header_field_pairs = []
+        for field in selected_fields:
+            try:
+                verbose_name = model._meta.get_field(field).verbose_name or field.replace('_', ' ').title()
+            except:
+                verbose_name = field.replace('_', ' ').title()
+            header_field_pairs.append((verbose_name, field))
 
-        # Export as PDF
-        if 'export_pdf' in request.GET:
-            AuditLog.objects.create(
-                action_type='other',
-                action='Exported Custom Report as PDF',
-                performed_by=current_employee,
-                details=f'User exported a custom report for model {model_name} with fields {", ".join(selected_fields)} as PDF.'
-            )
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=letter)
-            elements = []
+        # Format results for display (handle complex field types)
+        formatted_results = []
+        for row in results:
+            formatted_row = {}
+            for field in selected_fields:
+                value = row[field]
+                # Handle None values
+                if value is None:
+                    formatted_row[field] = '—'
+                # Handle foreign keys and other complex types
+                elif isinstance(value, models.Model):
+                    formatted_row[field] = str(value)
+                # Handle dates
+                elif isinstance(value, (datetime.date, datetime.datetime)):
+                    formatted_row[field] = value.strftime('%Y-%m-%d')
+                else:
+                    formatted_row[field] = str(value)
+            formatted_results.append(formatted_row)
 
-            styles = getSampleStyleSheet()
-            elements.append(Paragraph(f"Custom Report: {model_name}", styles['Title']))
-            elements.append(Spacer(1, 12))
+        # Paginate results
+        paginator = Paginator(formatted_results, 10)  # 10 results per page
+        page_number = request.GET.get('page', 1)
+        try:
+            paginated_results = paginator.page(page_number)
+        except PageNotAnInteger:
+            paginated_results = paginator.page(1)
+        except EmptyPage:
+            paginated_results = paginator.page(paginator.num_pages)
 
-            # Report Data
-            data = [headers]
-            for row in results:
-                data.append([str(row[field]) for field in selected_fields])
-            table = Table(data)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 14),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ]))
-            elements.append(table)
-            elements.append(Spacer(1, 12))
+        # Handle exports
+        if 'export_pdf' in request.GET or 'export' in request.GET:
+            if not results:
+                messages.error(request, "No data available to export.")
+                return redirect('custom_report_builder')
 
-            # Aggregation Result
-            if aggregation_result:
-                elements.append(Paragraph("Aggregation Result", styles['Heading2']))
-                for key, value in aggregation_result.items():
-                    elements.append(Paragraph(f"{key}: {value:.2f}", styles['Normal']))
+            # Export as PDF
+            if 'export_pdf' in request.GET:
+                AuditLog.objects.create(
+                    action_type='other',
+                    action='Exported Custom Report as PDF',
+                    performed_by=current_employee,
+                    details=filter_details
+                )
+                buffer = BytesIO()
+                doc = SimpleDocTemplate(
+                    buffer,
+                    pagesize=(letter[1], letter[0]),  # Landscape orientation
+                    leftMargin=0.5*inch,
+                    rightMargin=0.5*inch,
+                    topMargin=0.5*inch,
+                    bottomMargin=0.5*inch
+                )
+                elements = []
+
+                styles = getSampleStyleSheet()
+                cell_style = ParagraphStyle(
+                    'CellStyle',
+                    parent=styles['Normal'],
+                    fontSize=8,
+                    leading=9,
+                    wordWrap='CJK',
+                )
+                elements.append(Paragraph(f"Custom Report: {model_name}", styles['Title']))
                 elements.append(Spacer(1, 12))
 
-            doc.build(elements)
-            buffer.seek(0)
-            response = HttpResponse(buffer, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.pdf"'
-            return response
+                # Report Data
+                data = [[pair[0] for pair in header_field_pairs]]  # Headers
+                for row in results:
+                    row_data = []
+                    for _, field in header_field_pairs:
+                        value = row[field]
+                        if value is None:
+                            row_data.append('—')
+                        elif isinstance(value, (datetime.date, datetime.datetime)):
+                            row_data.append(value.strftime('%Y-%m-%d'))
+                        else:
+                            row_data.append(Paragraph(str(value), cell_style))
+                    data.append(row_data)
 
-        # Export as CSV
-        if 'export' in request.GET:
-            AuditLog.objects.create(
-                action_type='other',
-                action='Exported Custom Report',
-                performed_by=current_employee,
-                details=f'User exported a custom report for model {model_name} with fields {", ".join(selected_fields)} as CSV.'
-            )
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.csv"'
-            writer = csv.writer(response)
-            writer.writerow(headers)
-            for row in results:
-                writer.writerow([row[field] for field in selected_fields])
-            if aggregation_result:
-                writer.writerow([])
-                writer.writerow(['Aggregation'])
-                for key, value in aggregation_result.items():
-                    writer.writerow([key, value])
-            return response
+                # Calculate column widths dynamically
+                num_columns = len(header_field_pairs)
+                total_width = 10 * inch  # Approximate usable width in landscape
+                col_width = total_width / num_columns
+                col_widths = [col_width] * num_columns
+
+                table = Table(data, colWidths=col_widths, rowHeights=[0.3*inch]*len(data))
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ]))
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+
+                # Aggregation Result
+                if aggregation_result:
+                    elements.append(Paragraph("Aggregation Result", styles['Heading2']))
+                    for key, value in aggregation_result.items():
+                        if isinstance(value, (int, float)):
+                            formatted_value = f"{value:.2f}" if isinstance(value, float) else str(value)
+                        else:
+                            formatted_value = str(value)
+                        elements.append(Paragraph(f"{key}: {formatted_value}", styles['Normal']))
+                    elements.append(Spacer(1, 12))
+
+                doc.build(elements)
+                buffer.seek(0)
+                response = HttpResponse(buffer, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.pdf"'
+                return response
+
+            # Export as CSV
+            if 'export' in request.GET:
+                AuditLog.objects.create(
+                    action_type='other',
+                    action='Exported Custom Report as CSV',
+                    performed_by=current_employee,
+                    details=filter_details
+                )
+                response = HttpResponse(content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.csv"'
+                writer = csv.writer(response)
+                writer.writerow([pair[0] for pair in header_field_pairs])  # Headers
+                for row in results:
+                    row_data = []
+                    for _, field in header_field_pairs:
+                        value = row[field]
+                        if isinstance(value, (datetime.date, datetime.datetime)):
+                            row_data.append(value.strftime('%Y-%m-%d'))
+                        else:
+                            row_data.append(value)
+                    writer.writerow(row_data)
+                if aggregation_result:
+                    writer.writerow([])
+                    writer.writerow(['Aggregation'])
+                    for key, value in aggregation_result.items():
+                        writer.writerow([key, value])
+                return response
+
+    # Provide feedback if no results
+    if form.is_valid() and results is not None and not results:
+        messages.info(request, "No data found for the selected filters. Try adjusting your criteria.")
 
     return render(request, 'employee/custom_report_builder.html', {
         'form': form,
-        'results': results,
-        'headers': headers,
+        'results': paginated_results,
+        'headers': header_field_pairs,  # Pass header_field_pairs instead of headers
         'aggregation_result': aggregation_result,
     })
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .decorators import role_required
+from .models import IssueReport, Employee, Notification
+from .forms import IssueReportForm
+
+@login_required
+def report_issue(request):
+    if request.method == 'POST':
+        form = IssueReportForm(request.POST, request.FILES)
+        if form.is_valid():
+            issue = form.save(commit=False)
+            issue.reporter = Employee.objects.get(eID=request.user.username)
+
+            # Determine recipient (e.g., HR or department manager)
+            if issue.category == 'SAFETY':
+                recipient = Employee.objects.filter(role='hr').first()
+            else:
+                recipient = Employee.objects.filter(department=issue.reporter.department, role='manager').first() or \
+                           Employee.objects.filter(role='hr').first()
+
+            if not recipient:
+                messages.error(request, "No suitable recipient found for this report.")
+                return redirect('report_issue')
+
+            issue.recipient = recipient
+            issue.save()
+
+            # Create notification for the recipient using existing fields
+            Notification.objects.create(
+                recipient=recipient,
+                message=f"New issue reported by {issue.reporter.firstName} {issue.reporter.lastName}: {issue.title}. View at: /ems/issue-detail/{issue.id}/",
+                request_type='Issue Report',
+                request_id=str(issue.id)
+            )
+
+            messages.success(request, "Issue reported successfully.")
+            return redirect('my_issue_reports')
+    else:
+        form = IssueReportForm()
+    return render(request, 'employee/report_issue.html', {'form': form})
+
+@login_required
+def my_issue_reports(request):
+    employee = Employee.objects.get(eID=request.user.username)
+    reports = IssueReport.objects.filter(reporter=employee)
+    return render(request, 'employee/my_issue_reports.html', {'reports': reports})
+
+@login_required
+@role_required('manager', 'hr', 'admin')
+def manage_issue_reports(request):
+    employee = Employee.objects.get(eID=request.user.username)
+    if employee.role == 'admin':
+        reports = IssueReport.objects.all()
+    else:
+        reports = IssueReport.objects.filter(recipient=employee)
+    return render(request, 'employee/manage_issue_reports.html', {'reports': reports})
+
+@login_required
+@role_required('manager', 'hr', 'admin')
+def issue_detail(request, id):
+    issue = get_object_or_404(IssueReport, id=id)
+    employee = Employee.objects.get(eID=request.user.username)
+
+    # Ensure the user has permission to view this report
+    if employee.role != 'admin' and issue.recipient != employee:
+        messages.error(request, "You do not have permission to view this report.")
+        return redirect('manage_issue_reports')
+
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        if status in [choice[0] for choice in IssueReport.STATUS_CHOICES]:
+            issue.status = status
+            issue.save()
+
+            # Notify the reporter of the status update using existing fields
+            Notification.objects.create(
+                recipient=issue.reporter,
+                message=f"Your issue '{issue.title}' has been updated to {issue.get_status_display()} by {employee.firstName} {employee.lastName}. View at: /ems/issue-detail/{issue.id}/",
+                request_type='Issue Update',
+                request_id=str(issue.id)
+            )
+            messages.success(request, "Issue status updated successfully.")
+        else:
+            messages.error(request, "Invalid status selected.")
+        return redirect('issue_detail', id=id)
+
+    return render(request, 'employee/issue_detail.html', {'issue': issue})

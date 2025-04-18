@@ -1,13 +1,10 @@
-# employee/urls.py
 from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
     path('dashboard', views.dashboard, name="dashboard"),
     path('attendance', views.attendance, name="attendance"),
-    #path('notice', views.notice, name="notice"),
     path('hr-dashboard/', views.hr_dashboard, name="hr_dashboard"),
-    #re_path(r'noticedetail/(?P<id>\d+)/', views.noticedetail, name="noticedetail"),
     path('assignwork', views.assignwork, name="assignwork"),
     path('mywork', views.mywork, name="mywork"),
     path('workdetails/<str:wid>/', views.workdetails, name='workdetails'),
@@ -39,18 +36,9 @@ urlpatterns = [
     path('leave-request/', views.leave_request, name='leave_request'),
     path('issue-compulsory-leave/', views.issue_compulsory_leave, name='issue_compulsory_leave'),
     path('employee_database/', views.employee_database, name='employee_database'),
-
-    # --- CHANGE THIS LINE ---
-    # path('employee/<str:eID>/', views.employee_detail, name='employee_detail'),
-    path('employee/<path:eID>/', views.employee_detail, name='employee_detail'), # Use path converter
-    # --- END CHANGE ---
-
+    re_path(r'employee/(?P<eID>[A-Za-z0-9/]+)/export/', views.export_employee_detail, name='export_employee_detail'),
+    re_path(r'employee/(?P<eID>[A-Za-z0-9/]+)/', views.employee_detail, name='employee_detail'),
     path('export_employee_data/', views.export_employee_data, name='export_employee_data'),
-
-    # --- ALSO CHANGE THIS LINE ---
-    # path('employee/<str:eID>/export/', views.export_employee_detail, name='export_employee_detail'),
-    path('employee/<path:eID>/export/', views.export_employee_detail, name='export_employee_detail'), # Use path converter here too
-    # --- END CHANGE ---
     path('manage-review-templates/', views.manage_review_templates, name='manage_review_templates'),
     path('create-review-template/', views.create_review_template, name='create_review_template'),
     path('schedule-performance-review/', views.schedule_performance_review, name='schedule_performance_review'),
@@ -62,4 +50,8 @@ urlpatterns = [
     path('custom-report-builder/', views.custom_report_builder, name='custom_report_builder'),
     path('templates/<int:template_id>/', views.view_template_details, name='view_template_details'),
     path('reviews/submitted/', views.view_submitted_reviews, name='view_submitted_reviews'),
+    path('report-issue/', views.report_issue, name='report_issue'),
+    path('my-issue-reports/', views.my_issue_reports, name='my_issue_reports'),
+    path('manage-issue-reports/', views.manage_issue_reports, name='manage_issue_reports'),
+    path('issue-detail/<int:id>/', views.issue_detail, name='issue_detail'),
 ]

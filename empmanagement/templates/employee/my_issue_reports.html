@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">My Issue Reports</h2>
+            <a href="{% url 'report_issue' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <i class="fas fa-plus mr-2"></i>Report a New Issue
+            </a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-6 py-4">
+                <h2 class="text-xl font-semibold">Your Reported Issues</h2>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Title</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Category</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Status</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Created At</th>
+                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for report in reports %}
+                            <tr class="hover:bg-gray-50 transition-all">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ report.title }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ report.get_category_display }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ report.get_status_display }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ report.created_at|date:"Y-m-d H:i" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <a href="{% url 'issue_detail' report.id %}" class="text-indigo-600 hover:text-indigo-800">View Details</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                    No issue reports found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

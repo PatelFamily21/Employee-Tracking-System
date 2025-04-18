@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load dict_lookup %}
+
 {% block content %}
 <section class="py-10 bg-gray-50">
     <div class="max-w-6xl mx-auto px-4">
@@ -15,8 +17,8 @@
         {% if messages %}
             <div class="mb-6">
                 {% for message in messages %}
-                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
-                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% elif message.tags == 'info' %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'info' %}fas fa-info-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -118,7 +120,7 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr class="bg-gray-50">
-                                {% for header in headers %}
+                                {% for header, field_name in headers %}
                                 <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">{{ header }}</th>
                                 {% endfor %}
                             </tr>
@@ -126,8 +128,8 @@
                         <tbody class="divide-y divide-gray-200">
                             {% for row in results %}
                             <tr class="hover:bg-gray-50 transition-all">
-                                {% for field in row.values %}
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ field }}</td>
+                                {% for header, field_name in headers %}
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ row|get_item:field_name }}</td>
                                 {% endfor %}
                             </tr>
                             {% empty %}
@@ -140,6 +142,38 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                {% if results.has_other_pages %}
+                    <div class="mt-6 bg-gray-50 border border-gray-100 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing <span class="font-medium">{{ results.start_index }}</span> to <span class="font-medium">{{ results.end_index }}</span> of <span class="font-medium">{{ results.paginator.count }}</span> entries
+                            </p>
+                        </div>
+                        <div class="flex space-x-2">
+                            {% if results.has_previous %}
+                                <a href="?page=1" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                                <a href="?page={{ results.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-angle-left mr-1"></i> Previous
+                                </a>
+                            {% endif %}
+                            <span class="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md text-sm font-medium text-blue-700">
+                                {{ results.number }}
+                            </span>
+                            {% if results.has_next %}
+                                <a href="?page={{ results.next_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Next <i class="fas fa-angle-right ml-1"></i>
+                                </a>
+                                <a href="?page={{ results.paginator.num_pages }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
                 
                 {% if aggregation_result %}
                 <div class="mt-8 bg-gray-50 p-5 rounded-lg border border-gray-200">

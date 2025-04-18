@@ -503,3 +503,35 @@ class ReviewResponse(models.Model):
     def __str__(self):
         return f"Response to {self.question} by {self.respondent} for {self.review}"
     
+from django.db import models
+from django.utils import timezone
+
+class IssueReport(models.Model):
+    CATEGORY_CHOICES = [
+        ('SAFETY', 'Safety'),
+        ('EQUIPMENT', 'Equipment'),
+        ('INTERPERSONAL', 'Interpersonal'),
+        ('OTHER', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    ]
+
+    reporter = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='reported_issues')
+    recipient = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, related_name='received_issues')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OTHER')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    attachment = models.FileField(upload_to='issue_attachments/', null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.reporter.firstName} ({self.get_category_display()})"
+    

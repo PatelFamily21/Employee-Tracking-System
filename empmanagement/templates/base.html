@@ -216,7 +216,17 @@
                     <a href="{% url 'makeRequest' %}" class="text-sm truncate sidebar-text">Requests</a>
                     <span class="sidebar-tooltip">Requests</span>
                 </div>
-                <!-- New General Item: View Performance Reviews -->
+                <!-- New General Items: Issue Reporting -->
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/report-issue' %}active{% endif %}">
+                    <i class="fas fa-exclamation-circle mr-3 text-gray-500"></i>
+                    <a href="{% url 'report_issue' %}" class="text-sm truncate sidebar-text">Report a Problem</a>
+                    <span class="sidebar-tooltip">Report a Problem</span>
+                </div>
+                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/my-issue-reports' %}active{% endif %}">
+                    <i class="fas fa-file-alt mr-3 text-gray-500"></i>
+                    <a href="{% url 'my_issue_reports' %}" class="text-sm truncate sidebar-text">My Issue Reports</a>
+                    <span class="sidebar-tooltip">My Issue Reports</span>
+                </div>
                 <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/view-performance-reviews' %}active{% endif %}">
                     <i class="fas fa-star mr-3 text-gray-500"></i>
                     <a href="{% url 'view_performance_reviews' %}" class="text-sm truncate sidebar-text">Performance Reviews</a>
@@ -253,6 +263,12 @@
                         {% endif %}
                         <span class="sidebar-tooltip">Managerial Requests</span>
                     </div>
+                    <!-- New Manager/Admin Item: Manage Issue Reports -->
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-issue-reports' %}active{% endif %}">
+                        <i class="fas fa-tools mr-3 text-gray-500"></i>
+                        <a href="{% url 'manage_issue_reports' %}" class="text-sm truncate sidebar-text">Manage Issue Reports</a>
+                        <span class="sidebar-tooltip">Manage Issue Reports</span>
+                    </div>
                 {% endif %}
 
                 <!-- HR/Admin Items -->
@@ -265,13 +281,11 @@
                         <a href="{% url 'hr_dashboard' %}" class="text-sm truncate sidebar-text">HR Dashboard</a>
                         <span class="sidebar-tooltip">HR Dashboard</span>
                     </div>
-                    <!-- Inside HR Controls section -->
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/standard-hr-reports' %}active{% endif %}">
                         <i class="fas fa-chart-bar mr-3 text-gray-500"></i>
                         <a href="{% url 'standard_hr_reports' %}" class="text-sm truncate sidebar-text">Standard HR Reports</a>
                         <span class="sidebar-tooltip">Standard HR Reports</span>
                     </div>
-                    <!-- Inside HR Controls section -->
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/custom-report-builder' %}active{% endif %}">
                         <i class="fas fa-table mr-3 text-gray-500"></i>
                         <a href="{% url 'custom_report_builder' %}" class="text-sm truncate sidebar-text">Custom Report Builder</a>
@@ -318,13 +332,11 @@
                         <a href="{% url 'issue_compulsory_leave' %}" class="text-sm truncate sidebar-text">Issue Compulsory Leave</a>
                         <span class="sidebar-tooltip">Issue Compulsory Leave</span>
                     </div>
-                    <!-- Inside HR Controls section -->
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/view-submitted-reviews' %}active{% endif %}">
                         <i class="fas fa-eye mr-3 text-gray-500"></i>
                         <a href="{% url 'view_submitted_reviews' %}" class="text-sm truncate sidebar-text">View Submitted Reviews</a>
                         <span class="sidebar-tooltip">View Submitted Reviews</span>
                     </div>
-                    <!-- New HR/Admin Items: Performance Review Management -->
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-review-templates' %}active{% endif %}">
                         <i class="fas fa-file-alt mr-3 text-gray-500"></i>
                         <a href="{% url 'manage_review_templates' %}" class="text-sm truncate sidebar-text">Manage Review Templates</a>
@@ -450,7 +462,7 @@
                 
                 // Helper functions
                 function setupTooltips() {
-                    sidebarItems.forEach((item, index) => {
+                    sidebar.forEach((item, index) => {
                         const tooltip = item.querySelector('.sidebar-tooltip');
                         if (tooltip) {
                             item.addEventListener('mouseenter', () => {
