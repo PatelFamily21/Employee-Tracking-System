@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="py-10 bg-gray-50">
+<section class="py-6 sm:py-10 bg-gray-50">
     <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Employee Management</h2>
-            <div class="flex space-x-3">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Employee Management</h2>
+            <div class="w-full sm:w-auto">
                 <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                 </a>
@@ -24,42 +25,112 @@
         {% endif %}
 
         <!-- Add Employee Form -->
-        <div class="max-w-6xl mx-auto px-4">
-            <!-- Form section -->
+        <div class="max-w-6xl mx-auto">
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-                <!-- Form header -->
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Add New Employee</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Add New Employee</h2>
                 </div>
                 
-                <!-- Form body -->
-                <div class="p-6">
-                    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 sm:p-6">
+                    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         {% csrf_token %}
-                        {% for field in form %}
-                            {% if field.name == 'can_assign_cross_department' %}
-                                <div>
-                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
-                                    <div class="flex items-center">
-                                        {{ field }}
-                                        <span class="ml-2 text-sm text-gray-500">Allow cross-department task assignment</span>
-                                    </div>
-                                    {% if field.errors %}
-                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <div>
-                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
-                                    {{ field }}
-                                    {% if field.errors %}
-                                        <p class="text-red-600 text-sm mt-1">{{ field.errors }}</p>
-                                    {% endif %}
-                                </div>
+                        <!-- Explicitly render fields except eID -->
+                        <div class="w-full">
+                            <label for="{{ form.firstName.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.firstName.label }}</label>
+                            {{ form.firstName }}
+                            {% if form.firstName.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.firstName.errors }}</p>
                             {% endif %}
-                        {% endfor %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.middleName.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.middleName.label }}</label>
+                            {{ form.middleName }}
+                            {% if form.middleName.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.middleName.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.lastName.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.lastName.label }}</label>
+                            {{ form.lastName }}
+                            {% if form.lastName.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.lastName.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.phoneNo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.phoneNo.label }}</label>
+                            {{ form.phoneNo }}
+                            {% if form.phoneNo.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.phoneNo.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.email.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.addharNo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.addharNo.label }}</label>
+                            {{ form.addharNo }}
+                            {% if form.addharNo.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.addharNo.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.dOB.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.dOB.label }}</label>
+                            {{ form.dOB }}
+                            {% if form.dOB.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.dOB.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.designation.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.designation.label }}</label>
+                            {{ form.designation }}
+                            {% if form.designation.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.designation.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.salary.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.salary.label }}</label>
+                            {{ form.salary }}
+                            {% if form.salary.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.salary.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.joinDate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.joinDate.label }}</label>
+                            {{ form.joinDate }}
+                            {% if form.joinDate.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.joinDate.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.department.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.department.label }}</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.department.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="w-full">
+                            <label for="{{ form.inferred_role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.inferred_role.label }}</label>
+                            {{ form.inferred_role }}
+                            {% if form.inferred_role.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.inferred_role.errors }}</p>
+                            {% endif %}
+                        </div>
                         <div class="md:col-span-2">
-                            <button type="submit" name="action" value="add" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <label for="{{ form.can_assign_cross_department.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">{{ form.can_assign_cross_department.label }}</label>
+                            <div class="flex items-center">
+                                {{ form.can_assign_cross_department }}
+                                <span class="ml-2 text-sm text-gray-500">Allow cross-department task assignment</span>
+                            </div>
+                            {% if form.can_assign_cross_department.errors %}
+                                <p class="text-red-600 text-sm mt-1">{{ form.can_assign_cross_department.errors }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <button type="submit" name="action" value="add" class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                 <i class="fas fa-user-plus mr-2"></i>Add Employee
                             </button>
                         </div>
@@ -69,63 +140,60 @@
 
             <!-- Employee List -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Employee List</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Employee List</h2>
                 </div>
                 
-                <div class="p-6">
-                    <div class="overflow-x-auto">
+                <div class="p-4 sm:p-6">
+                    <div class="overflow-x-auto -mx-4 sm:mx-0">
                         <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept Assign</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signup Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archived</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EID</th>
+                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 {% for emp in employees %}
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.eID }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.firstName }} {{ emp.lastName }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.role }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.department.name|default:"—" }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.eID }}</td>
+                                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {{ emp.firstName }} {{ emp.lastName }}
+                                            <!-- Mobile-only info -->
+                                            <div class="sm:hidden text-xs text-gray-500 mt-1">
+                                                <div>{{ emp.role }} - {{ emp.department.name|default:"—" }}</div>
+                                                <div class="mt-1">
+                                                    {% if emp.is_active %}
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                                    {% else %}
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.role }}</td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.department.name|default:"—" }}</td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {% if emp.can_assign_cross_department %}
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Yes</span>
                                             {% else %}
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">No</span>
                                             {% endif %}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {% if emp.has_completed_signup %}
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Registered</span>
-                                            {% else %}
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending Signup</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                             {% if emp.is_active %}
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
                                             {% else %}
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
                                             {% endif %}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {% if emp.is_archived %}
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Yes ({{ emp.archived_at|date:"Y-m-d" }})</span>
-                                            {% else %}
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">No</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            <div class="flex space-x-2">
+                                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            <div class="flex flex-col sm:flex-row gap-2">
                                                 {% if emp.is_active %}
                                                     <form method="post" class="inline">
                                                         {% csrf_token %}
@@ -165,7 +233,7 @@
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="9" class="px-6 py-4 text-center text-gray-500">
+                                        <td colspan="7" class="px-3 sm:px-6 py-4 text-center text-gray-500">
                                             <div class="flex items-center justify-center">
                                                 <i class="fas fa-user-slash mr-2"></i>No employees found.
                                             </div>
@@ -178,66 +246,67 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Apply styles to all form inputs
-            const allInputs = document.querySelectorAll('form input, form select, form textarea');
-            allInputs.forEach(input => {
-                if (input.type !== 'checkbox' && input.type !== 'date') {
-                    input.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
-                }
-            });
-
-            // Style date inputs
-            const dateInputs = document.querySelectorAll('input[type="date"]');
-            dateInputs.forEach(input => {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Apply styles to all form inputs
+        const allInputs = document.querySelectorAll('form input, form select, form textarea');
+        allInputs.forEach(input => {
+            if (input.type !== 'checkbox' && input.type !== 'date') {
                 input.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
-            });
-
-            // Style the checkbox
-            const checkbox = document.querySelector('input[name="can_assign_cross_department"]');
-            if (checkbox) {
-                checkbox.classList.add('h-4', 'w-4', 'text-indigo-600', 'border-gray-300', 'rounded', 'focus:ring-indigo-500');
-            }
-
-            // Dynamically enable/disable the can_assign_cross_department checkbox based on designation
-            const designationSelect = document.querySelector('select[name="designation"]');
-            const canAssignCheckbox = document.querySelector('input[name="can_assign_cross_department"]');
-            const canAssignLabel = canAssignCheckbox ? canAssignCheckbox.closest('div').querySelector('label') : null;
-            const canAssignSpan = canAssignCheckbox ? canAssignCheckbox.closest('div').querySelector('span') : null;
-
-            if (designationSelect && canAssignCheckbox && canAssignLabel && canAssignSpan) {
-                const updateCheckboxState = () => {
-                    const designation = designationSelect.value;
-                    const restrictedDesignations = ['HR', 'Admin', 'Project Manager', 'Team Leader'];
-                    const isRestricted = !restrictedDesignations.includes(designation);
-
-                    if (isRestricted) {
-                        canAssignCheckbox.disabled = true;
-                        canAssignCheckbox.checked = false;
-                        canAssignLabel.classList.add('text-gray-400');
-                        canAssignSpan.classList.add('text-gray-400');
-                        canAssignCheckbox.classList.remove('text-indigo-600', 'focus:ring-indigo-500');
-                        canAssignCheckbox.classList.add('text-gray-300');
-                        canAssignCheckbox.setAttribute('title', "Cross-department assignment is not available for employees with the 'employee' role.");
-                    } else {
-                        canAssignCheckbox.disabled = false;
-                        canAssignLabel.classList.remove('text-gray-400');
-                        canAssignSpan.classList.remove('text-gray-400');
-                        canAssignCheckbox.classList.add('text-indigo-600', 'focus:ring-indigo-500');
-                        canAssignCheckbox.classList.remove('text-gray-300');
-                        canAssignCheckbox.removeAttribute('title');
-                    }
-                };
-
-                // Initial state
-                updateCheckboxState();
-
-                // Update state on designation change
-                designationSelect.addEventListener('change', updateCheckboxState);
             }
         });
-    </script>
+
+        // Style date inputs
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            input.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
+        });
+
+        // Style the checkbox
+        const checkbox = document.querySelector('input[name="can_assign_cross_department"]');
+        if (checkbox) {
+            checkbox.classList.add('h-4', 'w-4', 'text-indigo-600', 'border-gray-300', 'rounded', 'focus:ring-indigo-500');
+        }
+
+        // Dynamically enable/disable the can_assign_cross_department checkbox based on designation
+        const designationSelect = document.querySelector('select[name="designation"]');
+        const canAssignCheckbox = document.querySelector('input[name="can_assign_cross_department"]');
+        const canAssignLabel = canAssignCheckbox ? canAssignCheckbox.closest('div').querySelector('label') : null;
+        const canAssignSpan = canAssignCheckbox ? canAssignCheckbox.closest('div').querySelector('span') : null;
+
+        if (designationSelect && canAssignCheckbox && canAssignLabel && canAssignSpan) {
+            const updateCheckboxState = () => {
+                const designation = designationSelect.value;
+                const restrictedDesignations = ['HR', 'Admin', 'Project Manager', 'Team Leader'];
+                const isRestricted = !restrictedDesignations.includes(designation);
+
+                if (isRestricted) {
+                    canAssignCheckbox.disabled = true;
+                    canAssignCheckbox.checked = false;
+                    canAssignLabel.classList.add('text-gray-400');
+                    canAssignSpan.classList.add('text-gray-400');
+                    canAssignCheckbox.classList.remove('text-indigo-600', 'focus:ring-indigo-500');
+                    canAssignCheckbox.classList.add('text-gray-300');
+                    canAssignCheckbox.setAttribute('title', "Cross-department assignment is not available for employees with the 'employee' role.");
+                } else {
+                    canAssignCheckbox.disabled = false;
+                    canAssignLabel.classList.remove('text-gray-400');
+                    canAssignSpan.classList.remove('text-gray-400');
+                    canAssignCheckbox.classList.add('text-indigo-600', 'focus:ring-indigo-500');
+                    canAssignCheckbox.classList.remove('text-gray-300');
+                    canAssignCheckbox.removeAttribute('title');
+                }
+            };
+
+            // Initial state
+            updateCheckboxState();
+
+            // Update state on designation change
+            designationSelect.addEventListener('change', updateCheckboxState);
+        }
+    });
+</script>
 {% endblock %}

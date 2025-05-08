@@ -1,82 +1,190 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Leave Request Details</h1>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <!-- Back Link - Mobile Friendly -->
+    <div class="mb-6">
+        <a href="{% url 'notifications' %}" class="group inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:transform group-hover:-translate-x-1 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span class="font-medium">Back to Notifications</span>
+        </a>
+    </div>
+
+    <!-- Page header with status badge -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Leave Request Details</h1>
+        <div class="mt-3 sm:mt-0">
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium 
+                {% if leave_request.status == 'approved' %}bg-green-100 text-green-800 border border-green-200
+                {% elif leave_request.status == 'rejected' %}bg-red-100 text-red-800 border border-red-200
+                {% else %}bg-yellow-100 text-yellow-800 border border-yellow-200{% endif %}">
+                <span class="w-2 h-2 rounded-full mr-2 
+                    {% if leave_request.status == 'approved' %}bg-green-500
+                    {% elif leave_request.status == 'rejected' %}bg-red-500
+                    {% else %}bg-yellow-500{% endif %}"></span>
+                {{ leave_request.status|title }}
+            </span>
+        </div>
+    </div>
 
     <!-- Messages -->
     {% if messages %}
-        <div class="mb-6">
+        <div class="mb-6 space-y-3">
             {% for message in messages %}
-                <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                    {{ message }}
+                <div class="p-4 rounded-lg flex items-center shadow-sm border 
+                    {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-700
+                    {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-700
+                    {% else %}bg-blue-50 border-blue-200 text-blue-700{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {% if message.tags == 'success' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% elif message.tags == 'error' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% else %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% endif %}
+                    </svg>
+                    <span>{{ message }}</span>
                 </div>
             {% endfor %}
         </div>
     {% endif %}
 
-    <div class="bg-white p-6 rounded-xl shadow-md">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Request ID: {{ leave_request.Id }}</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <p class="text-sm text-gray-600">Requester:</p>
-                <p class="text-gray-900">{{ leave_request.requester.firstName }} {{ leave_request.requester.lastName }} ({{ leave_request.requester.eID }})</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Destination Employee:</p>
-                <p class="text-gray-900">{{ leave_request.destination_employee.firstName }} {{ leave_request.destination_employee.lastName }} ({{ leave_request.destination_employee.eID }})</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Request Date:</p>
-                <p class="text-gray-900">{{ leave_request.request_date|date:"Y-m-d H:i" }}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Status:</p>
-                <p class="text-gray-900 {% if leave_request.status == 'approved' %}text-green-600{% elif leave_request.status == 'rejected' %}text-red-600{% else %}text-yellow-600{% endif %}">
-                    {{ leave_request.status|title }}
-                </p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Start Date:</p>
-                <p class="text-gray-900">{{ leave_request.start_date }}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">End Date:</p>
-                <p class="text-gray-900">{{ leave_request.end_date }}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Compulsory Leave:</p>
-                <p class="text-gray-900">{{ leave_request.is_compulsory|yesno:"Yes,No" }}</p>
+    <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+        <!-- Header with request ID -->
+        <div class="border-b border-gray-100 bg-gray-50 px-6 py-4">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                <h2 class="text-lg font-semibold text-gray-800">Request ID: <span class="font-mono">{{ leave_request.Id }}</span></h2>
             </div>
         </div>
-        <div class="mt-4">
-            <p class="text-sm text-gray-600">Reason:</p>
-            <p class="text-gray-900">{{ leave_request.request_message }}</p>
-        </div>
+        
+        <!-- Details Section -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Requester Information -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Requester</h3>
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                                {{ leave_request.requester.firstName|slice:":1" }}{{ leave_request.requester.lastName|slice:":1" }}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-base font-medium text-gray-900">{{ leave_request.requester.firstName }} {{ leave_request.requester.lastName }}</div>
+                                <div class="text-sm text-gray-500">Employee ID: {{ leave_request.requester.eID }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Information -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Leave Period</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                            <div class="flex items-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div>
+                                    <div class="text-sm text-gray-600">From</div>
+                                    <div class="font-medium">{{ leave_request.start_date }}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div>
+                                    <div class="text-sm text-gray-600">To</div>
+                                    <div class="font-medium">{{ leave_request.end_date }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Approval/Rejection Buttons for Destination Employee -->
-        {% if can_process %}
-            <div class="mt-6 flex space-x-4">
-                <form method="post" action="{% url 'employee_requests' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
-                    <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
-                        Approve
-                    </button>
-                </form>
-                <form method="post" action="{% url 'employee_requests' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
-                    <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200">
-                        Reject
-                    </button>
-                </form>
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Destination Employee -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Destination Employee</h3>
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                {{ leave_request.destination_employee.firstName|slice:":1" }}{{ leave_request.destination_employee.lastName|slice:":1" }}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-base font-medium text-gray-900">{{ leave_request.destination_employee.firstName }} {{ leave_request.destination_employee.lastName }}</div>
+                                <div class="text-sm text-gray-500">Employee ID: {{ leave_request.destination_employee.eID }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Details -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Additional Details</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-gray-600">Request Date</div>
+                                <div class="font-medium">{{ leave_request.request_date|date:"Y-m-d H:i" }}</div>
+                            </div>
+                            <div class="border-t border-gray-200 pt-3 flex items-center justify-between">
+                                <div class="text-sm text-gray-600">Compulsory Leave</div>
+                                <div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if leave_request.is_compulsory %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ leave_request.is_compulsory|yesno:"Yes,No" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        {% endif %}
-    </div>
 
-    <div class="mt-4">
-        <a href="{% url 'notifications' %}" class="text-indigo-600 hover:underline">Back to Notifications</a>
+            <!-- Reason Section -->
+            <div class="mt-8 space-y-3">
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Reason for Leave</h3>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                    <p class="text-gray-800 whitespace-pre-line">{{ leave_request.request_message }}</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            {% if can_process %}
+                <div class="mt-8 pt-6 border-t border-gray-100">
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Actions</h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <form method="post" action="{% url 'employee_requests' %}" class="flex-1 sm:flex-initial">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
+                            <button type="submit" name="action" value="approve" 
+                                    class="w-full sm:w-auto flex items-center justify-center px-6 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition duration-200 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Approve Request
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'employee_requests' %}" class="flex-1 sm:flex-initial">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ leave_request.Id }}">
+                            <button type="submit" name="action" value="reject" 
+                                    class="w-full sm:w-auto flex items-center justify-center px-6 py-2.5 rounded-lg bg-white border border-red-500 text-red-600 hover:bg-red-50 transition duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject Request
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

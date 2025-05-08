@@ -1,40 +1,42 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">{{ noticedetail.title }}</h2>
-                <div class="flex space-x-3">
-                    <a href="{% url 'notice' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Notices
-                    </a>
-                </div>
+    <section class="py-6 sm:py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-3 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">{{ noticedetail.title }}</h2>
+                <a href="{% url 'notice' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Notices
+                </a>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Notice Details</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Notice Details</h2>
                 </div>
                 
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     <!-- Notice Information Card -->
-                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
-                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Notice Information</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Posted On:</span>
-                                <span class="text-gray-700">{{ noticedetail.publishDate|date:"Y-m-d H:i" }}</span>
+                    <div class="bg-gray-50 p-4 sm:p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Notice Information</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <!-- Info items with improved mobile layout -->
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Posted On:</span>
+                                <span class="text-gray-700 text-sm">{{ noticedetail.publishDate|date:"Y-m-d H:i" }}</span>
                             </div>
+                            
                             {% if noticedetail.posted_by %}
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Posted By:</span>
-                                <span class="text-gray-700">{{ noticedetail.posted_by.firstName }} {{ noticedetail.posted_by.lastName }}</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Posted By:</span>
+                                <span class="text-gray-700 text-sm">{{ noticedetail.posted_by.firstName }} {{ noticedetail.posted_by.lastName }}</span>
                             </div>
                             {% endif %}
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Departments:</span>
-                                <span class="text-gray-700">
+                            
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Departments:</span>
+                                <span class="text-gray-700 text-sm">
                                     {% if noticedetail.departments.exists %}
                                         {% for dept in noticedetail.departments.all %}
                                             {{ dept.name }}{% if not forloop.last %}, {% endif %}
@@ -44,19 +46,22 @@
                                     {% endif %}
                                 </span>
                             </div>
+                            
                             {% if noticedetail.expires_on %}
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Expires On:</span>
-                                <span class="text-gray-700">{{ noticedetail.expires_on|date:"Y-m-d" }}</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Expires On:</span>
+                                <span class="text-gray-700 text-sm">{{ noticedetail.expires_on|date:"Y-m-d" }}</span>
                             </div>
                             {% endif %}
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Viewed By:</span>
-                                <span class="text-gray-700">{{ noticedetail.views.count }} employee(s)</span>
+                            
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Viewed By:</span>
+                                <span class="text-gray-700 text-sm">{{ noticedetail.views.count }} employee(s)</span>
                             </div>
+                            
                             {% if noticedetail.is_urgent %}
-                            <div class="flex items-center">
-                                <span class="font-medium text-gray-600 w-32">Status:</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                                <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Status:</span>
                                 <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Urgent Notice</span>
                             </div>
                             {% endif %}
@@ -64,20 +69,22 @@
                     </div>
                     
                     <!-- Notice Content -->
-                    <div class="bg-white p-5 rounded-lg mb-6 border border-gray-200">
-                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Notice Content</h3>
-                        <div class="prose max-w-none text-gray-700">
+                    <div class="bg-white p-4 sm:p-5 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Notice Content</h3>
+                        <div class="prose max-w-none text-gray-700 text-sm sm:text-base">
                             {{ noticedetail.description|linebreaks }}
                         </div>
                     </div>
                     
                     <!-- Action Buttons -->
-                    <div class="flex mt-6">
-                        <a href="{% url 'notice' %}" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <a href="{% url 'notice' %}" 
+                           class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                             <i class="fas fa-arrow-left mr-2"></i>Back to Notices
                         </a>
                         {% if request.user.employee.role in 'hr,admin' and noticedetail.posted_by == request.user.employee %}
-                            <a href="{% url 'edit_notice' id=noticedetail.Id %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <a href="{% url 'edit_notice' id=noticedetail.Id %}" 
+                               class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                 <i class="fas fa-edit mr-2"></i>Edit Notice
                             </a>
                         {% endif %}

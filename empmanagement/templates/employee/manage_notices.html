@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <section class="py-10 bg-gray-50">
+    <section class="py-6 sm:py-10 bg-gray-50">
         <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Manage Notices</h2>
-                <div class="flex space-x-3">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Manage Notices</h2>
+                <div class="w-full sm:w-auto">
                     <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>
@@ -13,27 +14,27 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
-                    <h2 class="text-xl font-semibold">Notices Management</h2>
-                    
-                    <a href="{% url 'create_notice' %}" class="flex items-center bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all">
+                <!-- Header with Create Button -->
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+                    <h2 class="text-lg sm:text-xl font-semibold">Notices Management</h2>
+                    <a href="{% url 'create_notice' %}" class="w-full sm:w-auto flex items-center justify-center bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all">
                         <i class="fas fa-plus mr-2"></i>Create New Notice
                     </a>
                 </div>
                 
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     <!-- Filter Options -->
                     <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
-                        <div class="flex flex-wrap items-center justify-between">
-                            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mr-4">Filter Notices</h3>
-                            <div class="flex space-x-4">
-                                <a href="?is_urgent=true" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+                            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Filter Notices</h3>
+                            <div class="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
+                                <a href="?is_urgent=true" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm">
                                     <i class="fas fa-exclamation-circle mr-2"></i>Urgent Only
                                 </a>
-                                <a href="?is_urgent=false" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                                <a href="?is_urgent=false" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm">
                                     <i class="fas fa-bell-slash mr-2"></i>Non-Urgent Only
                                 </a>
-                                <a href="?" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                                <a href="?" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm">
                                     <i class="fas fa-list mr-2"></i>Show All
                                 </a>
                             </div>
@@ -43,13 +44,13 @@
                     <!-- Notices List -->
                     <div class="space-y-4">
                         {% for notice in notices %}
-                            <div class="bg-gray-50 p-5 rounded-lg mb-4 border border-gray-200">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <div class="flex items-center">
+                            <div class="bg-gray-50 p-4 sm:p-5 rounded-lg border border-gray-200">
+                                <div class="flex flex-col sm:flex-row justify-between items-start space-y-3 sm:space-y-0">
+                                    <div class="w-full sm:w-auto">
+                                        <div class="flex flex-wrap items-center gap-2">
                                             <h3 class="font-medium text-gray-800">{{ notice.title }}</h3>
                                             {% if notice.is_urgent %}
-                                                <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Urgent</span>
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Urgent</span>
                                             {% endif %}
                                         </div>
                                         <div class="mt-2 text-sm text-gray-600">
@@ -59,12 +60,13 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex items-center space-x-2">
-                                        <a href="{% url 'edit_notice' notice.Id %}" class="flex items-center justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 transition-all">
+                                    <div class="flex flex-col sm:flex-row gap-2 sm:space-x-2 w-full sm:w-auto">
+                                        <a href="{% url 'edit_notice' notice.Id %}" 
+                                           class="flex items-center justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 transition-all w-full sm:w-auto">
                                             <i class="fas fa-edit mr-2"></i>Edit
                                         </a>
                                         <a href="{% url 'delete_notice' notice.Id %}" 
-                                           class="flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-all"
+                                           class="flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-all w-full sm:w-auto"
                                            onclick="return confirm('Are you sure you want to delete this notice?')">
                                             <i class="fas fa-trash mr-2"></i>Delete
                                         </a>

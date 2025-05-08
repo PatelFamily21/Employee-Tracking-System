@@ -6,6 +6,7 @@ from collections import defaultdict
 from io import BytesIO
 import csv
 import os
+import datetime
 
 # Third-party imports (Django)
 from django.apps import apps
@@ -150,6 +151,8 @@ def notifications(request):
     }
     return render(request, 'employee/notifications.html', context)
 
+from django.utils import timezone
+from datetime import datetime as dt, time
 
 @role_required('employee', 'manager', 'hr', 'admin')
 def attendance(request):
@@ -157,16 +160,11 @@ def attendance(request):
     today = timezone.now().date()
     current_time = timezone.now()  # Timezone-aware datetime in EAT (Africa/Nairobi)
     
-    # Define time windows in EAT
-    check_in_start = time(0, 0)    # 00:00
-    check_in_end = time(9, 30)     # 09:30
-    check_out_start = time(16, 0)  # 16:00
-    check_out_end = time(17, 0)    # 17:00
-    
-    # Get current time components
-    current_hour = current_time.hour
-    current_minute = current_time.minute
-    current_time_of_day = time(current_hour, current_minute)
+    # Define time windows
+    check_in_start = timezone.make_aware(dt.combine(today, time(0, 0)))  # 00:00
+    check_in_end = timezone.make_aware(dt.combine(today, time(9, 30)))   # 09:30
+    check_out_start = timezone.make_aware(dt.combine(today, time(16, 0))) # 16:00
+    check_out_end = timezone.make_aware(dt.combine(today, time(17, 0)))  # 17:00
     
     # Check if employee is on approved leave today
     is_on_leave_today = LeaveRequest.objects.filter(
@@ -201,8 +199,8 @@ def attendance(request):
     end_date = request.GET.get('end_date')
     if start_date and end_date:
         try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            start_date = dt.strptime(start_date, '%Y-%m-%d').date()
+            end_date = dt.strptime(end_date, '%Y-%m-%d').date()
             attendance_history = attendance_history.filter(date__range=[start_date, end_date])
         except ValueError:
             messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
@@ -234,7 +232,7 @@ def attendance(request):
                 messages.error(request, "You are on approved leave today and cannot check in.")
             elif attendance_record:
                 messages.error(request, "You have already checked in today.")
-            elif not (check_in_start <= current_time_of_day <= check_in_end):
+            elif not (check_in_start <= current_time <= check_in_end):
                 messages.error(request, "Check-in is only allowed between 00:00 and 09:30 EAT.")
             else:
                 Attendance.objects.create(
@@ -261,7 +259,7 @@ def attendance(request):
                 messages.error(request, "You need to check in first.")
             elif attendance_record.check_out_time:
                 messages.error(request, "You have already checked out today.")
-            elif not (check_out_start <= current_time_of_day <= check_out_end):
+            elif not (check_out_start <= current_time <= check_out_end):
                 messages.error(request, "Check-out is only allowed between 16:00 and 17:00 EAT.")
             else:
                 attendance_record.check_out_time = current_time
@@ -648,62 +646,164 @@ def workdetails(request, wid):
     return render(request, "employee/workdetails.html", context)
 
 
-# Make Request view (accessible to all authenticated employees)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import HttpResponse, JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+from django.conf import settings
+import os
+import csv
+from datetime import datetime
+from django.utils import timezone
+from itertools import chain
+from .models import AuditLog, PendingRoleChange, Requests, Employee, Department, Notification
+from .decorators import role_required
+from .forms import makeRequestForm
+
 @role_required('employee', 'manager', 'hr', 'admin')
 def makeRequest(request):
     employee = Employee.objects.get(eID=request.user.username)
     flag = ""
 
     if request.method == 'POST':
+        # Check if this is a request type change (partial submission)
+        if 'request_type_change' in request.POST:
+            form = makeRequestForm(request.POST, request.FILES, request=request)
+            user_requests = Requests.objects.filter(requester=employee).order_by('-request_date')
+            return render(request, "employee/request.html", {
+                'requestForm': form,
+                'flag': flag,
+                'user_requests': user_requests,
+            })
+
+        # Check if this is a department change request (partial submission)
+        if 'department_change' in request.POST:
+            form = makeRequestForm(request.POST, request.FILES, request=request)
+            user_requests = Requests.objects.filter(requester=employee).order_by('-request_date')
+            return render(request, "employee/request.html", {
+                'requestForm': form,
+                'flag': flag,
+                'user_requests': user_requests,
+            })
+
+        # Full form submission (actual request submission)
         form = makeRequestForm(request.POST, request.FILES, request=request)
         if form.is_valid():
-            # Create the request
-            request_obj = form.save(commit=False)
-            request_obj.Id = f"REQ{timezone.now().strftime('%Y%m%d%H%M%S')}"
-            request_obj.requester = employee
-            request_obj.status = 'pending'
-            request_obj.save()
+            request_type = form.cleaned_data['request_type']
+            department = form.cleaned_data.get('department')
+            destination_employee = form.cleaned_data.get('destination_employee')
+            recipients = []
 
-            # Send a notification to the destination employee
-            destination_employee = request_obj.destination_employee
-            view_url = f"/ems/requestdetails/{request_obj.Id}/"
-            Notification.objects.create(
-                recipient=destination_employee,
-                message=f"New request from {employee.firstName} {employee.lastName}: {request_obj.request_message[:50]}... <a href='{view_url}' class='text-blue-600 hover:underline'>View</a>",
-                request_type='general_request',
-                request_id=request_obj.Id
-            )
+            if not destination_employee and (employee.role in ['hr', 'admin'] or (employee.role == 'manager' and request_type in ['resource', 'support', 'approval'])):
+                if not department:
+                    messages.error(request, "Department selection is required for sending to all employees.")
+                    return redirect('makeRequest')
+                recipients = Employee.objects.filter(department=department).exclude(eID=employee.eID)
+            else:
+                recipients = [destination_employee]
 
-            # Log the action
-            try:
-                AuditLog.objects.create(
-                    action_type='create',
-                    action="Request Created",
-                    performed_by=employee,
-                    details=f"Request ID: {request_obj.Id}, Recipient: {destination_employee.eID}"
+            if not recipients:
+                messages.error(request, "No valid recipients found for this request.")
+                return redirect('makeRequest')
+
+            for recipient in recipients:
+                request_obj = Requests(
+                    Id=f"REQ{timezone.now().strftime('%y%m%d%H%M%S')}{recipient.eID[:4]}",
+                    requester=employee,
+                    request_type=request_type,
+                    request_message=form.cleaned_data['request_message'],
+                    request_date=form.cleaned_data['request_date'],
+                    destination_employee=recipient,
+                    status='pending',
+                    request_file=form.cleaned_data['request_file']
                 )
-            except Exception as e:
-                messages.warning(request, f"Request submitted, but failed to log action: {str(e)}")
+                request_obj.save()
+
+                view_url = f"/ems/requestdetails/{request_obj.Id}/"
+                Notification.objects.create(
+                    recipient=recipient,
+                    message=f"New request from {employee.firstName} {employee.lastName}: {request_obj.request_message[:50]}... <a href='{view_url}' class='text-blue-600 hover:underline'>View</a>",
+                    request_type='general_request',
+                    request_id=request_obj.Id
+                )
+
+                try:
+                    AuditLog.objects.create(
+                        action_type='create',
+                        action="Request Created",
+                        performed_by=employee,
+                        details=f"Request ID: {request_obj.Id}, Recipient: {recipient.eID}"
+                    )
+                except Exception as e:
+                    messages.warning(request, f"Request submitted, but failed to log action: {str(e)}")
+
+            if employee.role == 'employee':
+                if request_type in ['resource', 'support', 'approval']:
+                    if request_type == 'approval':
+                        escalate_to_hr = form.cleaned_data.get('escalate_to_hr', False)
+                        if escalate_to_hr:
+                            next_hr = Employee.objects.filter(role='hr').first()
+                            if next_hr:
+                                Notification.objects.create(
+                                    recipient=next_hr,
+                                    message=f"Escalated request from {employee.firstName} {employee.lastName}: {request_obj.request_message[:50]}... <a href='/ems/requestdetails/{request_obj.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                                    request_type='general_request',
+                                    request_id=request_obj.Id
+                                )
+                else:  # 'other'
+                    if destination_employee.role != 'hr':
+                        next_admin = Employee.objects.filter(role='admin').first()
+                        if next_admin:
+                            Notification.objects.create(
+                                recipient=next_admin,
+                                message=f"Escalated request from {employee.firstName} {employee.lastName}: {request_obj.request_message[:50]}... <a href='/ems/requestdetails/{request_obj.Id}/' class='text-blue-600 hover:underline'>View</a>",
+                                request_type='general_request',
+                                request_id=request_obj.Id
+                            )
 
             flag = "Request Submitted"
-            messages.success(request, "Request submitted successfully!")
+            messages.success(request, f"Request submitted successfully to {len(recipients)} recipient(s)!")
             return redirect('makeRequest')
         else:
-            # Display form errors to the user
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}" if field != '__all__' else error)
     else:
         form = makeRequestForm(request=request, initial={'request_type': 'other'})
 
-    # Display the user's existing requests
     user_requests = Requests.objects.filter(requester=employee).order_by('-request_date')
-    
     return render(request, "employee/request.html", {
         'requestForm': form,
         'flag': flag,
         'user_requests': user_requests,
     })
+
+@role_required('manager', 'hr', 'admin')
+def get_employees_by_department(request):
+    department_id = request.GET.get('department')
+    request_type = request.GET.get('request_type')
+    role = request.GET.get('role')
+
+    if not department_id:
+        return JsonResponse({'employees': []})
+
+    employee = Employee.objects.get(eID=request.user.username)
+    employees = Employee.objects.filter(department__pk=department_id).exclude(eID=employee.eID)
+
+    if role == 'manager' and request_type == 'other':
+        employees = employees.filter(role='manager')
+
+    employee_list = [
+        {'id': emp.eID, 'name': f"{emp.firstName} {emp.lastName} ({emp.role.title()})"}
+        for emp in employees
+    ]
+    return JsonResponse({'employees': employee_list})
 
 
 
@@ -2099,8 +2199,30 @@ def system_settings(request):
     }
     return render(request, 'employee/system_settings.html', context)
 
+
+import datetime  # Explicitly import the datetime module
+from django.shortcuts import render
+from django.contrib import messages
+from django.http import HttpResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+from django.conf import settings
+import os
+import csv
+from .models import AuditLog, PendingRoleChange
+from .decorators import role_required
+
 @role_required('admin')
 def audit_logs(request):
+    # Debug: Inspect the datetime module
+    print("Debug: datetime module:", datetime)
+    print("Debug: dir(datetime):", dir(datetime))
+
     logs = AuditLog.objects.all()
 
     # Apply filters
@@ -2118,7 +2240,8 @@ def audit_logs(request):
         )
     if date_filter:
         try:
-            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            # Use fully qualified path to avoid import ambiguity
+            filter_date = datetime.datetime.strptime(date_filter, '%Y-%m-%d').date()
             logs = logs.filter(timestamp__date=filter_date)
         except ValueError:
             messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
@@ -2389,6 +2512,13 @@ def manage_notices(request):
     return render(request, 'employee/manage_notices.html', context)
 
 
+from django.core.paginator import Paginator
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from .models import Employee, LeaveRequest, AuditLog, Notification
+from .decorators import role_required
+
 @role_required('employee', 'manager')
 def leave_request(request):
     employee = Employee.objects.get(eID=request.user.username)
@@ -2400,8 +2530,9 @@ def leave_request(request):
         reason = request.POST.get('leave_reason')
         
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            # Use datetime.datetime.strptime to parse the date strings
+            start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
             
             if start_date < today:
                 messages.error(request, "Start date cannot be in the past.")
@@ -3134,7 +3265,7 @@ def schedule_performance_review(request):
                 )
             messages.success(request, message)
 
-        return redirect('employee_database')
+        return redirect('manage_review_templates')
 
     return render(request, 'employee/schedule_performance_review.html', {
         'form': form,
@@ -3286,33 +3417,47 @@ import datetime
 from .forms import CustomReportForm
 from django.apps import apps
 from django.db import models
-from .models import Employee, Document, AuditLog
+from .models import Employee, Document, AuditLog, EmergencyContact, Notification, IssueReport, Requests, WorkAssignmentLog, RoleChangeLog, PendingRoleChange, LeaveRequest, WorkAssignments, Notice, IssueComment, Department
 
 @login_required
 @role_required('hr', 'admin')
 def custom_report_builder(request):
-    # Initialize variables
     form = CustomReportForm(request.POST or None, request=request)
     results = None
-    header_field_pairs = None  # Updated to store (header, field_name) pairs
+    header_field_pairs = None
     aggregation_result = None
     current_employee = Employee.objects.get(eID=request.user.username)
     paginated_results = None
 
-    # Handle form submission
-    if request.method == 'POST' and form.is_valid():
-        model_name = form.cleaned_data['model']
-        selected_fields = form.cleaned_data['fields']
-        date_field = form.cleaned_data['date_field']
-        start_date = form.cleaned_data['start_date']
-        end_date = form.cleaned_data['end_date']
-        status_field = form.cleaned_data['status_field']
-        status_value = form.cleaned_data['status_value']
-        aggregation = form.cleaned_data['aggregation']
-        aggregation_field = form.cleaned_data['aggregation_field']
-        department = form.cleaned_data['department']
-        is_urgent = form.cleaned_data['is_urgent']
-        feedback_satisfactory = form.cleaned_data['feedback_satisfactory']
+    # Helper function to generate the report queryset
+    def generate_report(form_data, employee):
+        # Convert string dates back to date objects if they exist
+        start_date = form_data.get('start_date')
+        if start_date and isinstance(start_date, str):
+            start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = form_data.get('end_date')
+        if end_date and isinstance(end_date, str):
+            end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        # Retrieve Department instance from dept_id if stored in session
+        department_id = form_data.get('department')
+        department = None
+        if department_id:
+            try:
+                department = Department.objects.get(dept_id=department_id)
+            except Department.DoesNotExist:
+                messages.error(request, f"Department with ID {department_id} does not exist.")
+                return [], [], None, []
+
+        model_name = form_data['model']
+        selected_fields = form_data['fields']
+        date_field = form_data['date_field']
+        status_field = form_data['status_field']
+        status_value = form_data['status_value']
+        aggregation = form_data['aggregation']
+        aggregation_field = form_data['aggregation_field']
+        is_urgent = form_data.get('is_urgent', False)
+        feedback_satisfactory = form_data.get('feedback_satisfactory', False)
 
         # Log the report generation
         filter_details = (
@@ -3325,48 +3470,73 @@ def custom_report_builder(request):
         AuditLog.objects.create(
             action_type='other',
             action='Generated Custom Report',
-            performed_by=current_employee,
+            performed_by=employee,
             details=filter_details
         )
 
-        # Fetch the model and build the queryset
         model = apps.get_model('employee', model_name)
         queryset = model.objects.all()
 
-        # Apply optimizations for related fields
+        # Optimize queries
         if model_name == 'Employee':
             queryset = queryset.select_related('department')
         elif model_name == 'Attendance':
             queryset = queryset.select_related('eId__department')
         elif model_name == 'LeaveRequest':
-            queryset = queryset.select_related('requester__department', 'destination_employee')
+            queryset = queryset.select_related('requester__department', 'destination_employee__department')
         elif model_name == 'PerformanceReview':
             queryset = queryset.select_related('employee__department', 'template')
         elif model_name == 'WorkAssignments':
-            queryset = queryset.select_related('taskerId__department', 'assignerId')
+            queryset = queryset.select_related('taskerId__department', 'assignerId__department')
         elif model_name == 'RoleChangeLog':
-            queryset = queryset.select_related('employee', 'changed_by')
+            queryset = queryset.select_related('employee__department', 'changed_by__department')
         elif model_name == 'Notice':
-            queryset = queryset.select_related('posted_by').prefetch_related('departments')
+            queryset = queryset.select_related('posted_by__department').prefetch_related('departments')
+        elif model_name in ['EmergencyContact', 'Notification', 'IssueReport', 'Requests', 'WorkAssignmentLog', 'PendingRoleChange']:
+            queryset = queryset.select_related('employee__department')
 
-        # Apply filters
-        if date_field and start_date:
-            queryset = queryset.filter(**{f"{date_field}__gte": start_date})
-        if date_field and end_date:
-            queryset = queryset.filter(**{f"{date_field}__lte": end_date})
+        # Validate and apply date filter
+        if date_field:
+            field = model._meta.get_field(date_field)
+            if not isinstance(field, (models.DateField, models.DateTimeField)):
+                messages.error(request, f"{date_field} is not a valid date field for {model_name}.")
+            else:
+                if start_date:
+                    queryset = queryset.filter(**{f"{date_field}__gte": start_date})
+                if end_date:
+                    queryset = queryset.filter(**{f"{date_field}__lte": end_date})
+
+        # Validate and apply status filter
         if status_field and status_value:
-            queryset = queryset.filter(**{status_field: status_value})
+            try:
+                field = model._meta.get_field(status_field)
+                if not isinstance(field, models.CharField):
+                    messages.error(request, f"{status_field} is not a valid status field for {model_name}.")
+                else:
+                    queryset = queryset.filter(**{status_field: status_value})
+            except models.FieldDoesNotExist:
+                messages.error(request, f"{status_field} does not exist in {model_name}.")
 
-        # Department filtering (modularized)
-        if department:
-            department_filter_map = {
-                'Employee': {'field': 'department'},
-                'Attendance': {'field': 'eId__department'},
-                'LeaveRequest': {'field': 'requester__department'},
-                'PerformanceReview': {'field': 'employee__department'},
-                'WorkAssignments': {'field': 'taskerId__department'},
-            }
-            if model_name in department_filter_map:
+        # Department filtering
+        department_filter_map = {
+            'Employee': {'field': 'department'},
+            'Attendance': {'field': 'eId__department'},
+            'LeaveRequest': {'field': 'requester__department'},
+            'PerformanceReview': {'field': 'employee__department'},
+            'WorkAssignments': {'field': 'taskerId__department'},
+            'RoleChangeLog': {'field': 'employee__department'},
+            'Notice': {'field': 'departments'},
+            'EmergencyContact': {'field': 'employee__department'},
+            'Notification': {'field': 'recipient__department'},
+            'IssueReport': {'field': 'reporter__department'},
+            'Requests': {'field': 'requester__department'},
+            'WorkAssignmentLog': {'field': 'work_assignment__taskerId__department'},
+            'PendingRoleChange': {'field': 'employee__department'},
+        }
+        if department and model_name in department_filter_map:
+            if model_name == 'Notice':
+                queryset = queryset.filter(departments=department)
+            else:
                 queryset = queryset.filter(**{department_filter_map[model_name]['field']: department})
 
         # Model-specific filters
@@ -3375,10 +3545,16 @@ def custom_report_builder(request):
         if feedback_satisfactory and model_name == 'WorkAssignments':
             queryset = queryset.filter(feedback_satisfactory=True)
 
-        # Security: Filter sensitive data
+        # Security for sensitive data
         if model_name == 'Document':
-            if current_employee.role not in ['hr', 'admin']:
+            if employee.role not in ['hr', 'admin']:
                 queryset = queryset.filter(is_sensitive=False)
+            AuditLog.objects.create(
+                action_type='other',
+                action='Accessed Document Report',
+                performed_by=employee,
+                details=f"Attempted access to {len(queryset)} documents with is_sensitive filter"
+            )
 
         # Fetch results
         try:
@@ -3388,9 +3564,13 @@ def custom_report_builder(request):
             results = []
 
         # Apply aggregation
+        aggregation_result = None
         if aggregation and aggregation_field:
             try:
-                if aggregation == 'count':
+                field = model._meta.get_field(aggregation_field)
+                if aggregation in ['avg', 'sum'] and not isinstance(field, (models.IntegerField, models.FloatField)):
+                    messages.error(request, f"{aggregation_field} is not a numeric field for {aggregation}.")
+                elif aggregation == 'count':
                     aggregation_result = {f"{aggregation_field} Count": queryset.count()}
                 elif aggregation == 'avg':
                     agg = queryset.aggregate(avg=Avg(aggregation_field))['avg']
@@ -3408,7 +3588,6 @@ def custom_report_builder(request):
                 messages.error(request, f"Error calculating aggregation: {str(e)}")
                 aggregation_result = {}
 
-        # Prepare headers and field names for display
         header_field_pairs = []
         for field in selected_fields:
             try:
@@ -3417,27 +3596,47 @@ def custom_report_builder(request):
                 verbose_name = field.replace('_', ' ').title()
             header_field_pairs.append((verbose_name, field))
 
-        # Format results for display (handle complex field types)
         formatted_results = []
         for row in results:
             formatted_row = {}
             for field in selected_fields:
                 value = row[field]
-                # Handle None values
                 if value is None:
                     formatted_row[field] = '—'
-                # Handle foreign keys and other complex types
                 elif isinstance(value, models.Model):
                     formatted_row[field] = str(value)
-                # Handle dates
                 elif isinstance(value, (datetime.date, datetime.datetime)):
                     formatted_row[field] = value.strftime('%Y-%m-%d')
                 else:
                     formatted_row[field] = str(value)
             formatted_results.append(formatted_row)
 
+        return results, header_field_pairs, aggregation_result, formatted_results
+
+    # Handle POST request (report generation)
+    if request.method == 'POST' and form.is_valid():
+        # Convert date objects to ISO strings and Department to dept_id for session storage
+        department = form.cleaned_data['department']
+        form_data = {
+            'model': form.cleaned_data['model'],
+            'fields': form.cleaned_data['fields'],
+            'date_field': form.cleaned_data['date_field'],
+            'start_date': form.cleaned_data['start_date'].isoformat() if form.cleaned_data['start_date'] else None,
+            'end_date': form.cleaned_data['end_date'].isoformat() if form.cleaned_data['end_date'] else None,
+            'status_field': form.cleaned_data['status_field'],
+            'status_value': form.cleaned_data['status_value'],
+            'aggregation': form.cleaned_data['aggregation'],
+            'aggregation_field': form.cleaned_data['aggregation_field'],
+            'department': department.dept_id if department else None,  # Store dept_id instead of Department object
+            'is_urgent': form.cleaned_data['is_urgent'],
+            'feedback_satisfactory': form.cleaned_data['feedback_satisfactory'],
+        }
+        request.session['report_params'] = form_data
+
+        results, header_field_pairs, aggregation_result, formatted_results = generate_report(form_data, current_employee)
+
         # Paginate results
-        paginator = Paginator(formatted_results, 10)  # 10 results per page
+        paginator = Paginator(formatted_results, 10)
         page_number = request.GET.get('page', 1)
         try:
             paginated_results = paginator.page(page_number)
@@ -3446,154 +3645,170 @@ def custom_report_builder(request):
         except EmptyPage:
             paginated_results = paginator.page(paginator.num_pages)
 
-        # Handle exports
-        if 'export_pdf' in request.GET or 'export' in request.GET:
-            if not results:
-                messages.error(request, "No data available to export.")
-                return redirect('custom_report_builder')
+    # Handle GET request with export
+    if 'export' in request.GET or 'export_pdf' in request.GET:
+        form_data = request.session.get('report_params')
+        if not form_data:
+            messages.error(request, "No report data available to export. Please generate a report first.")
+            return redirect('custom_report_builder')
 
-            # Export as PDF
-            if 'export_pdf' in request.GET:
-                AuditLog.objects.create(
-                    action_type='other',
-                    action='Exported Custom Report as PDF',
-                    performed_by=current_employee,
-                    details=filter_details
-                )
-                buffer = BytesIO()
-                doc = SimpleDocTemplate(
-                    buffer,
-                    pagesize=(letter[1], letter[0]),  # Landscape orientation
-                    leftMargin=0.5*inch,
-                    rightMargin=0.5*inch,
-                    topMargin=0.5*inch,
-                    bottomMargin=0.5*inch
-                )
-                elements = []
+        results, header_field_pairs, aggregation_result, _ = generate_report(form_data, current_employee)
 
-                styles = getSampleStyleSheet()
-                cell_style = ParagraphStyle(
-                    'CellStyle',
-                    parent=styles['Normal'],
-                    fontSize=8,
-                    leading=9,
-                    wordWrap='CJK',
-                )
-                elements.append(Paragraph(f"Custom Report: {model_name}", styles['Title']))
+        if not results:
+            messages.error(request, "No data available to export.")
+            return redirect('custom_report_builder')
+
+        model_name = form_data['model']
+        department_id = form_data['department']
+        department = Department.objects.get(dept_id=department_id) if department_id else None
+        filter_details = (
+            f"Model: {model_name}, Fields: {', '.join(form_data['fields'])}, "
+            f"Date Field: {form_data['date_field'] or 'None'}, Start Date: {form_data['start_date'] or 'None'}, End Date: {form_data['end_date'] or 'None'}, "
+            f"Status Field: {form_data['status_field'] or 'None'}, Status Value: {form_data['status_value'] or 'None'}, "
+            f"Department: {department.name if department else 'None'}, "
+            f"Is Urgent: {form_data['is_urgent']}, Feedback Satisfactory: {form_data['feedback_satisfactory']}"
+        )
+
+        if 'export_pdf' in request.GET:
+            AuditLog.objects.create(
+                action_type='other',
+                action='Exported Custom Report as PDF',
+                performed_by=current_employee,
+                details=filter_details
+            )
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(
+                buffer,
+                pagesize=(letter[1], letter[0]),
+                leftMargin=0.5*inch,
+                rightMargin=0.5*inch,
+                topMargin=0.5*inch,
+                bottomMargin=0.5*inch
+            )
+            elements = []
+            styles = getSampleStyleSheet()
+            cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=9, wordWrap='CJK')
+            elements.append(Paragraph(f"Custom Report: {model_name}", styles['Title']))
+            elements.append(Spacer(1, 12))
+
+            data = [[pair[0] for pair in header_field_pairs]]
+            for row in results:
+                row_data = []
+                for _, field in header_field_pairs:
+                    value = row[field]
+                    if value is None:
+                        row_data.append('—')
+                    elif isinstance(value, (datetime.date, datetime.datetime)):
+                        row_data.append(value.strftime('%Y-%m-%d'))
+                    else:
+                        row_data.append(Paragraph(str(value), cell_style))
+                data.append(row_data)
+
+            num_columns = len(header_field_pairs)
+            total_width = 10 * inch
+            col_width = total_width / num_columns
+            col_widths = [col_width] * num_columns
+
+            table = Table(data, colWidths=col_widths, rowHeights=[0.3*inch]*len(data))
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 12))
+
+            if aggregation_result:
+                elements.append(Paragraph("Aggregation Result", styles['Heading2']))
+                for key, value in aggregation_result.items():
+                    if isinstance(value, (int, float)):
+                        formatted_value = f"{value:.2f}" if isinstance(value, float) else str(value)
+                    else:
+                        formatted_value = str(value)
+                    elements.append(Paragraph(f"{key}: {formatted_value}", styles['Normal']))
                 elements.append(Spacer(1, 12))
 
-                # Report Data
-                data = [[pair[0] for pair in header_field_pairs]]  # Headers
-                for row in results:
-                    row_data = []
-                    for _, field in header_field_pairs:
-                        value = row[field]
-                        if value is None:
-                            row_data.append('—')
-                        elif isinstance(value, (datetime.date, datetime.datetime)):
-                            row_data.append(value.strftime('%Y-%m-%d'))
-                        else:
-                            row_data.append(Paragraph(str(value), cell_style))
-                    data.append(row_data)
+            doc.build(elements)
+            buffer.seek(0)
+            response = HttpResponse(buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.pdf"'
+            return response
 
-                # Calculate column widths dynamically
-                num_columns = len(header_field_pairs)
-                total_width = 10 * inch  # Approximate usable width in landscape
-                col_width = total_width / num_columns
-                col_widths = [col_width] * num_columns
+        if 'export' in request.GET:
+            AuditLog.objects.create(
+                action_type='other',
+                action='Exported Custom Report as CSV',
+                performed_by=current_employee,
+                details=filter_details
+            )
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow([pair[0] for pair in header_field_pairs])
+            for row in results:
+                row_data = []
+                for _, field in header_field_pairs:
+                    value = row[field]
+                    if isinstance(value, (datetime.date, datetime.datetime)):
+                        row_data.append(value.strftime('%Y-%m-%d'))
+                    else:
+                        row_data.append(value)
+                writer.writerow(row_data)
+            if aggregation_result:
+                writer.writerow([])
+                writer.writerow(['Aggregation'])
+                for key, value in aggregation_result.items():
+                    writer.writerow([key, value])
+            return response
 
-                table = Table(data, colWidths=col_widths, rowHeights=[0.3*inch]*len(data))
-                table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 10),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ]))
-                elements.append(table)
-                elements.append(Spacer(1, 12))
-
-                # Aggregation Result
-                if aggregation_result:
-                    elements.append(Paragraph("Aggregation Result", styles['Heading2']))
-                    for key, value in aggregation_result.items():
-                        if isinstance(value, (int, float)):
-                            formatted_value = f"{value:.2f}" if isinstance(value, float) else str(value)
-                        else:
-                            formatted_value = str(value)
-                        elements.append(Paragraph(f"{key}: {formatted_value}", styles['Normal']))
-                    elements.append(Spacer(1, 12))
-
-                doc.build(elements)
-                buffer.seek(0)
-                response = HttpResponse(buffer, content_type='application/pdf')
-                response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.pdf"'
-                return response
-
-            # Export as CSV
-            if 'export' in request.GET:
-                AuditLog.objects.create(
-                    action_type='other',
-                    action='Exported Custom Report as CSV',
-                    performed_by=current_employee,
-                    details=filter_details
-                )
-                response = HttpResponse(content_type='text/csv')
-                response['Content-Disposition'] = f'attachment; filename="{model_name}_custom_report.csv"'
-                writer = csv.writer(response)
-                writer.writerow([pair[0] for pair in header_field_pairs])  # Headers
-                for row in results:
-                    row_data = []
-                    for _, field in header_field_pairs:
-                        value = row[field]
-                        if isinstance(value, (datetime.date, datetime.datetime)):
-                            row_data.append(value.strftime('%Y-%m-%d'))
-                        else:
-                            row_data.append(value)
-                    writer.writerow(row_data)
-                if aggregation_result:
-                    writer.writerow([])
-                    writer.writerow(['Aggregation'])
-                    for key, value in aggregation_result.items():
-                        writer.writerow([key, value])
-                return response
-
-    # Provide feedback if no results
     if form.is_valid() and results is not None and not results:
         messages.info(request, "No data found for the selected filters. Try adjusting your criteria.")
 
     return render(request, 'employee/custom_report_builder.html', {
         'form': form,
         'results': paginated_results,
-        'headers': header_field_pairs,  # Pass header_field_pairs instead of headers
+        'headers': header_field_pairs,
         'aggregation_result': aggregation_result,
     })
-
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.http import HttpResponse
+import csv
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 from .decorators import role_required
-from .models import IssueReport, Employee, Notification
+from .models import IssueReport, Employee, Notification, IssueComment, AuditLog
 from .forms import IssueReportForm
 
 @login_required
+@role_required('employee', 'manager')
 def report_issue(request):
     if request.method == 'POST':
         form = IssueReportForm(request.POST, request.FILES)
         if form.is_valid():
             issue = form.save(commit=False)
             issue.reporter = Employee.objects.get(eID=request.user.username)
+            employee = issue.reporter
 
-            # Determine recipient (e.g., HR or department manager)
-            if issue.category == 'SAFETY':
+            if employee.role == 'manager':
                 recipient = Employee.objects.filter(role='hr').first()
-            else:
-                recipient = Employee.objects.filter(department=issue.reporter.department, role='manager').first() or \
-                           Employee.objects.filter(role='hr').first()
+            else:  # employee role
+                if issue.category == 'SAFETY':
+                    recipient = Employee.objects.filter(role='hr').first()
+                else:
+                    recipient = Employee.objects.filter(department=employee.department, role='manager').first() or \
+                               Employee.objects.filter(role='hr').first()
 
             if not recipient:
                 messages.error(request, "No suitable recipient found for this report.")
@@ -3602,12 +3817,18 @@ def report_issue(request):
             issue.recipient = recipient
             issue.save()
 
-            # Create notification for the recipient using existing fields
             Notification.objects.create(
                 recipient=recipient,
-                message=f"New issue reported by {issue.reporter.firstName} {issue.reporter.lastName}: {issue.title}. View at: /ems/issue-detail/{issue.id}/",
+                message=f"New issue reported by {issue.reporter.firstName} {issue.reporter.lastName}: {issue.title}. <a href='/ems/issue-detail/{issue.id}/' class='text-blue-600 hover:underline'>View</a>",
                 request_type='Issue Report',
                 request_id=str(issue.id)
+            )
+
+            AuditLog.objects.create(
+                performed_by=issue.reporter,
+                action_type='create',
+                action='Issue Report Submitted',
+                details=f"Issue '{issue.title}' submitted by {issue.reporter.firstName} {issue.reporter.lastName} to {recipient.firstName} {recipient.lastName}"
             )
 
             messages.success(request, "Issue reported successfully.")
@@ -3619,18 +3840,34 @@ def report_issue(request):
 @login_required
 def my_issue_reports(request):
     employee = Employee.objects.get(eID=request.user.username)
-    reports = IssueReport.objects.filter(reporter=employee)
-    return render(request, 'employee/my_issue_reports.html', {'reports': reports})
+    reports = IssueReport.objects.filter(reporter=employee).order_by('-created_at')
+    paginator = Paginator(reports, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'employee/my_issue_reports.html', {'page_obj': page_obj})
 
 @login_required
-@role_required('manager', 'hr', 'admin')
+def my_issue_detail(request, id):
+    issue = get_object_or_404(IssueReport, id=id)
+    employee = Employee.objects.get(eID=request.user.username)
+
+    if issue.reporter != employee:
+        messages.error(request, "Access denied. Insufficient Permission")
+        return redirect('my_issue_reports')
+
+    comments = issue.comments.all()
+    return render(request, 'employee/my_issue_detail.html', {'issue': issue, 'comments': comments})
+
+@login_required
+@role_required('manager', 'hr')
 def manage_issue_reports(request):
     employee = Employee.objects.get(eID=request.user.username)
-    if employee.role == 'admin':
-        reports = IssueReport.objects.all()
-    else:
-        reports = IssueReport.objects.filter(recipient=employee)
-    return render(request, 'employee/manage_issue_reports.html', {'reports': reports})
+    reports = IssueReport.objects.filter(recipient=employee).order_by('-created_at')
+
+    paginator = Paginator(reports, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'employee/manage_issue_reports.html', {'page_obj': page_obj})
 
 @login_required
 @role_required('manager', 'hr', 'admin')
@@ -3638,27 +3875,59 @@ def issue_detail(request, id):
     issue = get_object_or_404(IssueReport, id=id)
     employee = Employee.objects.get(eID=request.user.username)
 
-    # Ensure the user has permission to view this report
     if employee.role != 'admin' and issue.recipient != employee:
         messages.error(request, "You do not have permission to view this report.")
         return redirect('manage_issue_reports')
 
     if request.method == 'POST':
-        status = request.POST.get('status')
-        if status in [choice[0] for choice in IssueReport.STATUS_CHOICES]:
-            issue.status = status
-            issue.save()
+        if 'status' in request.POST:
+            status = request.POST.get('status')
+            if status in [choice[0] for choice in IssueReport.STATUS_CHOICES]:
+                old_status = issue.status
+                issue.status = status
+                issue.save()
+                detail_url = f"/ems/my-issue-detail/{issue.id}/" if issue.reporter.role == 'employee' else f"/ems/issue-detail/{issue.id}/"
+                Notification.objects.create(
+                    recipient=issue.reporter,
+                    message=f"Your issue '{issue.title}' has been updated to {issue.get_status_display()} by {employee.firstName} {employee.lastName}. <a href='{detail_url}' class='text-blue-600 hover:underline'>View</a>",
+                    request_type='Issue Update',
+                    request_id=str(issue.id)
+                )
+                AuditLog.objects.create(
+                    performed_by=employee,
+                    action_type='update',
+                    action='Issue Status Updated',
+                    details=f"Issue '{issue.title}' status updated from {old_status} to {issue.status} by {employee.firstName} {employee.lastName}"
+                )
+                messages.success(request, "Issue status updated successfully.")
+            else:
+                messages.error(request, "Invalid status selected.")
+        elif 'comment' in request.POST:
+            comment_text = request.POST.get('comment')
+            if comment_text:
+                comment = IssueComment.objects.create(
+                    issue=issue,
+                    commenter=employee,
+                    comment=comment_text
+                )
+                detail_url = f"/ems/my-issue-detail/{issue.id}/" if issue.reporter.role == 'employee' else f"/ems/issue-detail/{issue.id}/"
+                Notification.objects.create(
+                    recipient=issue.reporter,
+                    message=f"New comment on your issue '{issue.title}' by {employee.firstName} {employee.lastName}: {comment_text[:50]}... <a href='{detail_url}' class='text-blue-600 hover:underline'>View</a>",
+                    request_type='Issue Comment',
+                    request_id=str(issue.id)
+                )
+                AuditLog.objects.create(
+                    performed_by=employee,
+                    action_type='create',
+                    action='Issue Comment Added',
+                    details=f"Comment added to issue '{issue.title}' by {employee.firstName} {employee.lastName}: {comment_text[:50]}..."
+                )
+                messages.success(request, "Comment added successfully.")
+            else:
+                messages.error(request, "Comment cannot be empty.")
 
-            # Notify the reporter of the status update using existing fields
-            Notification.objects.create(
-                recipient=issue.reporter,
-                message=f"Your issue '{issue.title}' has been updated to {issue.get_status_display()} by {employee.firstName} {employee.lastName}. View at: /ems/issue-detail/{issue.id}/",
-                request_type='Issue Update',
-                request_id=str(issue.id)
-            )
-            messages.success(request, "Issue status updated successfully.")
-        else:
-            messages.error(request, "Invalid status selected.")
         return redirect('issue_detail', id=id)
 
-    return render(request, 'employee/issue_detail.html', {'issue': issue})
+    comments = issue.comments.all()
+    return render(request, 'employee/issue_detail.html', {'issue': issue, 'comments': comments})

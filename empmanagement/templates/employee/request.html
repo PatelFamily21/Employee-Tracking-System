@@ -5,7 +5,6 @@
     <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold text-gray-800 mb-6">Make a Request</h1>
 
-        <!-- Messages -->
         {% if messages %}
             <div class="mb-6">
                 {% for message in messages %}
@@ -17,11 +16,12 @@
             </div>
         {% endif %}
 
-        <!-- Form to Submit a New Request -->
         <div class="bg-white p-6 rounded-xl shadow-md mb-6">
             <h2 class="text-xl font-semibold mb-4">Submit a New Request</h2>
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data" id="requestForm">
                 {% csrf_token %}
+                <input type="hidden" name="department_change" value="true" id="departmentChangeInput" disabled>
+                <input type="hidden" name="request_type_change" value="true" id="requestTypeChangeInput" disabled>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="mb-4">
                         <label for="id_request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
@@ -30,8 +30,17 @@
                             <p class="text-red-600 text-sm">{{ requestForm.request_type.errors }}</p>
                         {% endif %}
                     </div>
+                    {% if request.user.employee.role != 'employee' %}
+                        <div class="mb-4">
+                            <label for="id_department" class="block text-sm font-medium text-gray-700">Department (if applicable)</label>
+                            {{ requestForm.department }}
+                            {% if requestForm.department.errors %}
+                                <p class="text-red-600 text-sm">{{ requestForm.department.errors }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     <div class="mb-4">
-                        <label for="id_destination_employee" class="block text-sm font-medium text-gray-700">Recipient</label>
+                        <label for="id_destination_employee" class="block text-sm font-medium text-gray-700">Recipient (leave blank to send to all in department)</label>
                         {{ requestForm.destination_employee }}
                         {% if requestForm.destination_employee.errors %}
                             <p class="text-red-600 text-sm">{{ requestForm.destination_employee.errors }}</p>
@@ -63,7 +72,6 @@
             </form>
         </div>
 
-        <!-- List of Existing Requests -->
         <div class="bg-white p-6 rounded-xl shadow-md">
             <h2 class="text-xl font-semibold mb-4">Your Requests</h2>
             {% if user_requests %}
@@ -84,6 +92,30 @@
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const departmentSelect = document.getElementById('id_department');
+    const requestTypeSelect = document.getElementById('id_request_type');
+    const form = document.getElementById('requestForm');
+    const departmentChangeInput = document.getElementById('departmentChangeInput');
+    const requestTypeChangeInput = document.getElementById('requestTypeChangeInput');
+
+    if (departmentSelect) {
+        departmentSelect.addEventListener('change', function() {
+            departmentChangeInput.disabled = false;
+            form.submit();
+        });
+    }
+
+    if (requestTypeSelect) {
+        requestTypeSelect.addEventListener('change', function() {
+            requestTypeChangeInput.disabled = false;
+            form.submit();
+        });
+    }
+});
+</script>
 
 {% if flag != "" %}
     <script>

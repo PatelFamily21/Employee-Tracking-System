@@ -1,81 +1,80 @@
 <!-- employee/index.html -->
 {% extends "base.html" %}
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">Employee Dashboard</h1>
+    <section class="py-6 sm:py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Employee Dashboard</h1>
                 <div class="flex space-x-3">
-                    <a href="{% url 'profile' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                    <a href="{% url 'profile' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm sm:text-base">
                         <i class="fas fa-user mr-2"></i>My Profile
                     </a>
                 </div>
             </div>
 
             <!-- Quick Stats Grid -->
-           <!-- Quick Stats Grid -->
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-    {% if total_employees is not None %}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div class="flex items-center mb-3">
-                <div class="p-2 bg-blue-100 rounded-lg mr-3">
-                    <i class="fas fa-users text-blue-600"></i>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                {% if total_employees is not None %}
+                    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                        <div class="flex items-center mb-3">
+                            <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                                <i class="fas fa-users text-blue-600"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-700">
+                                {% if employee.role == 'manager' %}Team{% else %}Total{% endif %} Employees
+                            </h3>
+                        </div>
+                        <p class="text-2xl sm:text-3xl font-bold text-blue-600">{{ total_employees|default:"0" }}</p>
+                    </div>
+                {% endif %}
+                {% if pending_requests is not None %}
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                        <div class="flex items-center mb-3">
+                            <div class="p-2 bg-yellow-100 rounded-lg mr-3">
+                                <i class="fas fa-clock text-yellow-600"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-700">
+                                {% if employee.role == 'manager' %}Team{% else %}Pending{% endif %} Requests
+                            </h3>
+                        </div>
+                        <p class="text-3xl font-bold text-yellow-600">{{ pending_requests|default:"0" }}</p>
+                    </div>
+                {% endif %}
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                    <div class="flex items-center mb-3">
+                        <div class="p-2 bg-green-100 rounded-lg mr-3">
+                            <i class="fas fa-bell text-green-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700">Recent Notices</h3>
+                    </div>
+                    <p class="text-3xl font-bold text-green-600">{{ recent_notices|length|default:"0" }}</p>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-700">
-                    {% if employee.role == 'manager' %}Team{% else %}Total{% endif %} Employees
-                </h3>
+                {% if departments is not None %}
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                        <div class="flex items-center mb-3">
+                            <div class="p-2 bg-purple-100 rounded-lg mr-3">
+                                <i class="fas fa-building text-purple-600"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-700">Departments</h3>
+                        </div>
+                        <p class="text-3xl font-bold text-purple-600">{{ departments|default:"0" }}</p>
+                    </div>
+                {% endif %}
             </div>
-            <p class="text-3xl font-bold text-blue-600">{{ total_employees|default:"0" }}</p>
-        </div>
-    {% endif %}
-    {% if pending_requests is not None %}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div class="flex items-center mb-3">
-                <div class="p-2 bg-yellow-100 rounded-lg mr-3">
-                    <i class="fas fa-clock text-yellow-600"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-700">
-                    {% if employee.role == 'manager' %}Team{% else %}Pending{% endif %} Requests
-                </h3>
-            </div>
-            <p class="text-3xl font-bold text-yellow-600">{{ pending_requests|default:"0" }}</p>
-        </div>
-    {% endif %}
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-        <div class="flex items-center mb-3">
-            <div class="p-2 bg-green-100 rounded-lg mr-3">
-                <i class="fas fa-bell text-green-600"></i>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-700">Recent Notices</h3>
-        </div>
-        <p class="text-3xl font-bold text-green-600">{{ recent_notices|length|default:"0" }}</p>
-    </div>
-    {% if departments is not None %}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div class="flex items-center mb-3">
-                <div class="p-2 bg-purple-100 rounded-lg mr-3">
-                    <i class="fas fa-building text-purple-600"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-700">Departments</h3>
-            </div>
-            <p class="text-3xl font-bold text-purple-600">{{ departments|default:"0" }}</p>
-        </div>
-    {% endif %}
-</div>
 
             <!-- Employee Information -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-                <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
-                    <h2 class="text-xl font-semibold">Your Information</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-lg sm:text-xl font-semibold">Your Information</h2>
                     <a href="{% url 'profile' %}" class="text-white hover:text-indigo-100">
                         <i class="fas fa-edit"></i>
                     </a>
                 </div>
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     {% for emp in info %}
-                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <div class="bg-gray-50 p-4 sm:p-5 rounded-lg border border-gray-200">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="flex items-center">
+                                <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
                                     <span class="font-medium text-gray-600 w-32">Full Name:</span>
                                     <span class="text-gray-700">{{ emp.firstName }} {{ emp.middleName }} {{ emp.lastName }}</span>
                                 </div>
@@ -123,16 +122,16 @@
 
             <!-- Recent Activity -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Recent Notices</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Recent Notices</h2>
                 </div>
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     <div class="space-y-4">
                         {% for notice in recent_notices %}
                             <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all">
-                                <div class="flex justify-between items-center">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
                                     <p class="font-medium text-gray-800">{{ notice.title }}</p>
-                                    <span class="text-sm text-gray-500 bg-gray-100 py-1 px-2 rounded-full">{{ notice.publishDate|date:"Y-m-d" }}</span>
+                                    <span class="text-xs sm:text-sm text-gray-500 bg-gray-100 py-1 px-2 rounded-full">{{ notice.publishDate|date:"Y-m-d" }}</span>
                                 </div>
                             </div>
                         {% empty %}

@@ -1,40 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Performance Review Details</h2>
-            <div class="flex space-x-3">
-                <a href="{% url 'view_submitted_reviews' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Reviews
-                </a>
-            </div>
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-3 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Performance Review Details</h2>
+            <a href="{% url 'view_submitted_reviews' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Reviews
+            </a>
         </div>
         
+        <!-- Review Information Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Review Information</h2>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Review Information</h2>
             </div>
             
-            <div class="p-6">
-                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
-                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Review Details</h3>
+            <div class="p-4 sm:p-6">
+                <div class="bg-gray-50 p-4 sm:p-5 rounded-lg mb-6 border border-gray-200">
+                    <h3 class="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Review Details</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="flex items-center">
-                            <span class="font-medium text-gray-600 w-32">Employee:</span>
-                            <span class="text-gray-700">{{ review.employee }}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                            <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Employee:</span>
+                            <span class="text-gray-700 text-sm">{{ review.employee }}</span>
                         </div>
-                        <div class="flex items-center">
-                            <span class="font-medium text-gray-600 w-32">Date:</span>
-                            <span class="text-gray-700">{{ review.scheduled_date }}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                            <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Date:</span>
+                            <span class="text-gray-700 text-sm">{{ review.scheduled_date }}</span>
                         </div>
-                        <div class="flex items-center">
-                            <span class="font-medium text-gray-600 w-32">Template:</span>
-                            <span class="text-gray-700">{{ review.template }}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                            <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Template:</span>
+                            <span class="text-gray-700 text-sm">{{ review.template }}</span>
                         </div>
-                        <div class="flex items-center">
-                            <span class="font-medium text-gray-600 w-32">Status:</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0">
+                            <span class="font-medium text-gray-600 w-full sm:w-32 text-sm">Status:</span>
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                             {% if review.status == 'completed' %}bg-green-100 text-green-800
                             {% elif review.status == 'pending' %}bg-yellow-100 text-yellow-800
@@ -48,15 +48,17 @@
         </div>
         
         {% if analysis %}
+        <!-- Analysis Report Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Analysis Report (HR/Admin View)</h2>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Analysis Report</h2>
             </div>
             
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
+                <!-- Rating Summary -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Rating Summary</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="bg-green-50 p-4 rounded-lg border border-green-100">
                             <h4 class="text-sm text-green-800 font-medium mb-2">Positive (4-5)</h4>
                             <p class="text-3xl font-bold text-green-700">{{ analysis.rating_summary.positive }}</p>
@@ -70,40 +72,46 @@
                             <p class="text-3xl font-bold text-red-700">{{ analysis.rating_summary.negative }}</p>
                         </div>
                     </div>
+                    
                     {% if analysis.average_rating %}
-                    <div class="mt-4 bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-center">
-                        <div class="mr-4">
-                            <h4 class="text-sm text-indigo-800 font-medium mb-1">Average Rating</h4>
-                            <p class="text-3xl font-bold text-indigo-700">{{ analysis.average_rating|floatformat:1 }}<span class="text-xl">/5</span></p>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                {% if analysis.average_rating < 1 %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-0"></div>
-                                {% elif analysis.average_rating < 2 %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-1/5"></div>
-                                {% elif analysis.average_rating < 3 %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-2/5"></div>
-                                {% elif analysis.average_rating < 4 %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-3/5"></div>
-                                {% elif analysis.average_rating < 5 %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-4/5"></div>
-                                {% else %}
-                                    <div class="bg-indigo-600 h-2.5 rounded-full w-full"></div>
-                                {% endif %}
+                    <div class="mt-4 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0">
+                            <div class="sm:mr-4">
+                                <h4 class="text-sm text-indigo-800 font-medium mb-1">Average Rating</h4>
+                                <p class="text-3xl font-bold text-indigo-700">
+                                    {{ analysis.average_rating|floatformat:1 }}<span class="text-xl">/5</span>
+                                </p>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    {% if analysis.average_rating < 1 %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-0"></div>
+                                    {% elif analysis.average_rating < 2 %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-1/5"></div>
+                                    {% elif analysis.average_rating < 3 %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-2/5"></div>
+                                    {% elif analysis.average_rating < 4 %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-3/5"></div>
+                                    {% elif analysis.average_rating < 5 %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-4/5"></div>
+                                    {% else %}
+                                        <div class="bg-indigo-600 h-2.5 rounded-full w-full"></div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
                     {% endif %}
                 </div>
                 
+                <!-- Text Response Sentiments -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Text Response Sentiments</h3>
                     <div class="divide-y divide-gray-200">
                         {% for item in analysis.text_sentiments %}
                         <div class="py-4">
-                            <p class="font-medium text-gray-700 mb-1">{{ item.question }}</p>
-                            <p class="text-gray-600 mb-2">{{ item.response }}</p>
+                            <p class="font-medium text-gray-700 mb-2 text-sm sm:text-base">{{ item.question }}</p>
+                            <p class="text-gray-600 mb-3 text-sm">{{ item.response }}</p>
                             <span class="px-2 py-1 text-xs font-medium rounded 
                                 {% if item.sentiment == 'Positive' %}bg-green-100 text-green-800
                                 {% elif item.sentiment == 'Negative' %}bg-red-100 text-red-800
@@ -112,21 +120,22 @@
                             </span>
                         </div>
                         {% empty %}
-                        <p class="py-4 text-gray-500">No text responses to analyze.</p>
+                        <p class="py-4 text-gray-500 text-sm">No text responses to analyze.</p>
                         {% endfor %}
                     </div>
                 </div>
                 
+                <!-- Feedback Summary -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Employee Feedback Summary</h3>
                     <ul class="bg-gray-50 rounded-lg border border-gray-200 p-4">
                         {% for feedback in analysis.feedback_summary %}
-                        <li class="mb-2 flex items-start">
+                        <li class="mb-3 flex items-start text-sm">
                             <i class="fas fa-comment-dots mt-1 mr-2 text-indigo-500"></i>
                             <span>{{ feedback }}</span>
                         </li>
                         {% empty %}
-                        <li class="text-gray-500">No employee feedback provided.</li>
+                        <li class="text-gray-500 text-sm">No employee feedback provided.</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -134,58 +143,72 @@
         </div>
         {% endif %}
         
+        <!-- Response Details Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Response Details</h2>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Response Details</h2>
             </div>
             
-            <div class="p-6">
-                <div class="overflow-x-auto">
+            <div class="p-4 sm:p-6">
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Question</th>
-                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Respondent</th>
-                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Type</th>
-                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Response</th>
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Question</th>
+                                <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Respondent</th>
+                                <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             {% for response in responses %}
-                                <tr class="hover:bg-gray-50 transition-all">
-                                    <td class="px-6 py-4 text-sm text-gray-700">{{ response.question.question_text }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ response.respondent }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <span class="px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-800">
-                                            {{ response.response_type|title }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-700">
-                                        {% if response.question.question_type == 'rating' %}
-                                            <div class="flex items-center">
-                                                <span class="mr-2 font-medium">{{ response.rating|default:"0" }}/5</span>
-                                                <div class="flex text-yellow-400">
-                                                    {% for i in "12345"|make_list %}
-                                                        {% if forloop.counter <= response.rating %}
-                                                            <i class="fas fa-star text-yellow-400"></i>
-                                                        {% else %}
-                                                            <i class="fas fa-star text-gray-300"></i>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
+                            <tr class="hover:bg-gray-50 transition-all">
+                                <td class="px-3 sm:px-6 py-4">
+                                    <div class="text-sm text-gray-700">{{ response.question.question_text }}</div>
+                                    <!-- Mobile-only info -->
+                                    <div class="sm:hidden mt-2 space-y-1 text-xs text-gray-500">
+                                        <div>By: {{ response.respondent }}</div>
+                                        <div>
+                                            <span class="px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-800">
+                                                {{ response.response_type|title }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ response.respondent }}</td>
+                                <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    <span class="px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-800">
+                                        {{ response.response_type|title }}
+                                    </span>
+                                </td>
+                                <td class="px-3 sm:px-6 py-4 text-sm text-gray-700">
+                                    {% if response.question.question_type == 'rating' %}
+                                        <div class="flex items-center">
+                                            <span class="mr-2 font-medium">{{ response.rating|default:"0" }}/5</span>
+                                            <div class="flex text-yellow-400">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= response.rating %}
+                                                        <i class="fas fa-star text-yellow-400"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-star text-gray-300"></i>
+                                                    {% endif %}
+                                                {% endfor %}
                                             </div>
-                                        {% else %}
-                                            {{ response.text_response|default:"No response" }}
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                        </div>
+                                    {% else %}
+                                        {{ response.text_response|default:"No response" }}
+                                    {% endif %}
+                                </td>
+                            </tr>
                             {% empty %}
-                                <tr>
-                                    <td colspan="4" class="px-6 py-12 text-center text-gray-500">
-                                        <i class="fas fa-clipboard-check text-gray-400 text-3xl mb-3"></i>
-                                        <p>No responses available yet.</p>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="4" class="px-3 sm:px-6 py-8 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fas fa-clipboard-check text-2xl sm:text-3xl text-gray-400 mb-2"></i>
+                                        <p class="text-sm text-gray-500">No responses available yet.</p>
+                                    </div>
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>

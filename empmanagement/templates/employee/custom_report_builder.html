@@ -3,12 +3,12 @@
 {% load dict_lookup %}
 
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Custom Report Builder</h2>
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Custom Report Builder</h2>
             <div class="flex space-x-3">
-                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm sm:text-base">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                 </a>
             </div>
@@ -25,74 +25,50 @@
             </div>
         {% endif %}
 
+        <!-- Report Configuration Form -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Report Configuration</h2>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Report Configuration</h2>
             </div>
             
-            <div class="p-6">
-                <form method="post" class="space-y-6">
+            <div class="p-4 sm:p-6">
+                <form method="post" id="reportForm" class="space-y-6">
                     {% csrf_token %}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Model</label>
-                            {{ form.model|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Fields to Display</label>
-                            {{ form.fields|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Date Field for Filtering</label>
-                            {{ form.date_field|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                            {{ form.start_date|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                            {{ form.end_date|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Status Field for Filtering</label>
-                            {{ form.status_field|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Status Value</label>
-                            {{ form.status_value|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Aggregation</label>
-                            {{ form.aggregation|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Field to Aggregate</label>
-                            {{ form.aggregation_field|safe }}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Department</label>
-                            {{ form.department|safe }}
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        {% for field in form %}
+                            {% if field.name != 'is_urgent' and field.name != 'feedback_satisfactory' %}
+                                <div class="flex flex-col space-y-1">
+                                    <label class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                                    <div class="relative">
+                                        {{ field|safe }}
+                                    </div>
+                                    {% if field.help_text %}
+                                        <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                        <div class="flex items-center">
-                            <label class="flex items-center text-sm font-medium text-gray-700">
+                    <!-- Checkboxes Section -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                        <div class="flex items-start">
+                            <label class="inline-flex items-center text-sm font-medium text-gray-700">
                                 {{ form.is_urgent|safe }}
                                 <span class="ml-2">Urgent Notices Only</span>
                             </label>
                         </div>
-                        <div class="flex items-center">
-                            <label class="flex items-center text-sm font-medium text-gray-700">
+                        <div class="flex items-start">
+                            <label class="inline-flex items-center text-sm font-medium text-gray-700">
                                 {{ form.feedback_satisfactory|safe }}
                                 <span class="ml-2">Satisfactory Feedback Only</span>
                             </label>
                         </div>
                     </div>
                     
+                    <!-- Submit Button -->
                     <div class="mt-6">
-                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                        <button type="submit" class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                             <i class="fas fa-chart-bar mr-2"></i>Generate Report
                         </button>
                     </div>
@@ -101,76 +77,84 @@
         </div>
 
         {% if results %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Report Results</h2>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6 sm:mt-8">
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Report Results</h2>
             </div>
             
-            <div class="p-6">
-                <div class="mb-6 flex flex-wrap gap-3">
-                    <a href="{% url 'custom_report_builder' %}?export=csv" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+            <div class="p-4 sm:p-6">
+                <!-- Export Buttons -->
+                <div class="mb-6 flex flex-col sm:flex-row gap-3">
+                    <a href="{% url 'custom_report_builder' %}?export=csv" 
+                       class="w-full sm:w-auto flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
                         <i class="fas fa-file-csv mr-2"></i>Export as CSV
                     </a>
-                    <a href="{% url 'custom_report_builder' %}?export_pdf=1" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                    <a href="{% url 'custom_report_builder' %}?export_pdf=1" 
+                       class="w-full sm:w-auto flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
                         <i class="fas fa-file-pdf mr-2"></i>Export as PDF
                     </a>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                {% for header, field_name in headers %}
-                                <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">{{ header }}</th>
+                <!-- Results Table -->
+                <div class="overflow-x-auto -mx-4 sm:mx-0 table-scroll-indicator">
+                    <div class="inline-block min-w-full align-middle">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    {% for header, field_name in headers %}
+                                    <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                {% for row in results %}
+                                <tr class="hover:bg-gray-50 transition-all">
+                                    {% for header, field_name in headers %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 table-cell-mobile">{{ row|get_item:field_name }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="{{ headers|length }}" class="px-6 py-12 text-center text-gray-500">
+                                        No data found.
+                                    </td>
+                                </tr>
                                 {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            {% for row in results %}
-                            <tr class="hover:bg-gray-50 transition-all">
-                                {% for header, field_name in headers %}
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ row|get_item:field_name }}</td>
-                                {% endfor %}
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="{{ headers|length }}" class="px-6 py-12 text-center text-gray-500">
-                                    No data found.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Pagination -->
                 {% if results.has_other_pages %}
-                    <div class="mt-6 bg-gray-50 border border-gray-100 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                Showing <span class="font-medium">{{ results.start_index }}</span> to <span class="font-medium">{{ results.end_index }}</span> of <span class="font-medium">{{ results.paginator.count }}</span> entries
+                    <div class="mt-6 bg-gray-50 border border-gray-100 rounded-lg p-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <p class="text-sm text-gray-700 text-center sm:text-left">
+                                Showing <span class="font-medium">{{ results.start_index }}</span> to 
+                                <span class="font-medium">{{ results.end_index }}</span> of 
+                                <span class="font-medium">{{ results.paginator.count }}</span> entries
                             </p>
-                        </div>
-                        <div class="flex space-x-2">
-                            {% if results.has_previous %}
-                                <a href="?page=1" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </a>
-                                <a href="?page={{ results.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    <i class="fas fa-angle-left mr-1"></i> Previous
-                                </a>
-                            {% endif %}
-                            <span class="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md text-sm font-medium text-blue-700">
-                                {{ results.number }}
-                            </span>
-                            {% if results.has_next %}
-                                <a href="?page={{ results.next_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    Next <i class="fas fa-angle-right ml-1"></i>
-                                </a>
-                                <a href="?page={{ results.paginator.num_pages }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </a>
-                            {% endif %}
+                            <div class="flex flex-wrap justify-center gap-2">
+                                {% if results.has_previous %}
+                                    <a href="?page=1" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 pagination-button">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                    <a href="?page={{ results.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 pagination-button">
+                                        <i class="fas fa-angle-left mr-1"></i> Previous
+                                    </a>
+                                {% endif %}
+                                <span class="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md text-sm font-medium text-blue-700 pagination-button">
+                                    {{ results.number }}
+                                </span>
+                                {% if results.has_next %}
+                                    <a href="?page={{ results.next_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 pagination-button">
+                                        Next <i class="fas fa-angle-right ml-1"></i>
+                                    </a>
+                                    <a href="?page={{ results.paginator.num_pages }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 pagination-button">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 {% endif %}
@@ -195,6 +179,53 @@
 </section>
 
 <style>
+    @media (max-width: 640px) {
+        .pagination-button {
+            padding: 0.5rem !important;
+        }
+        
+        .table-cell-mobile {
+            padding: 0.75rem 0.5rem !important;
+        }
+        
+        .export-button {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+    
+    .table-scroll-indicator {
+        position: relative;
+    }
+    
+    .table-scroll-indicator::after {
+        content: '← Scroll →';
+        display: none;
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        color: #6B7280;
+    }
+    
+    @media (max-width: 640px) {
+        .table-scroll-indicator::after {
+            display: block;
+        }
+    }
+    
     .hidden { display: none; }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modelSelect = document.querySelector('#id_model');
+        if (modelSelect) {
+            modelSelect.addEventListener('change', function() {
+                document.getElementById('reportForm').submit();
+            });
+        }
+    });
+</script>
 {% endblock %}

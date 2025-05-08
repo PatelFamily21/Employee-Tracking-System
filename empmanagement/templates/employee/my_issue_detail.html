@@ -1,0 +1,105 @@
+<!-- employee/my_issue_detail.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-3 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Issue Report Detail</h2>
+            <a href="{% url 'my_issue_reports' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <i class="fas fa-arrow-left mr-2"></i>Back to My Reports
+            </a>
+        </div>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg sm:text-xl font-semibold">{{ issue.title }}</h2>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                    {% if issue.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                    {% elif issue.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-800
+                    {% elif issue.status == 'RESOLVED' %}bg-green-100 text-green-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ issue.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="p-4 sm:p-6">
+                <div class="space-y-6">
+                    <!-- Issue Details -->
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Details</h3>
+                            <div class="mt-2 p-4 bg-gray-50 rounded-lg">
+                                <p class="text-gray-700 whitespace-pre-line">{{ issue.description }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">Category</h3>
+                                <p class="mt-1 text-gray-700">{{ issue.get_category_display }}</p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">Date Submitted</h3>
+                                <p class="mt-1 text-gray-700">{{ issue.created_at|date:"F d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if issue.attachment %}
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Attachment</h3>
+                            <div class="mt-1">
+                                <a href="{{ issue.attachment.url }}" target="_blank" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-paperclip mr-2"></i>
+                                    View Attachment
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Assigned To</h3>
+                            <p class="mt-1 text-gray-700">{{ issue.recipient.firstName }} {{ issue.recipient.lastName }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">Comments</h3>
+                        
+                        <div class="space-y-4">
+                            {% for comment in comments %}
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-start">
+                                        <div class="font-medium text-gray-700">{{ comment.commenter.firstName }} {{ comment.commenter.lastName }}</div>
+                                        <div class="text-xs text-gray-500">{{ comment.created_at|date:"F d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="mt-2 text-gray-700">{{ comment.comment }}</div>
+                                </div>
+                            {% empty %}
+                                <div class="text-center text-gray-500 py-4">
+                                    <i class="fas fa-comments text-3xl mb-2"></i>
+                                    <p>No comments yet.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

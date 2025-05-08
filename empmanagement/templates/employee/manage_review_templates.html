@@ -1,45 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Manage Performance Review Templates</h2>
-            <div class="flex space-x-3">
-                <a href="{% url 'create_review_template' %}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all">
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Manage Performance Review Templates</h2>
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <a href="{% url 'create_review_template' %}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all w-full sm:w-auto">
                     <i class="fas fa-plus mr-2"></i>Create New Template
                 </a>
-                <a href="{% url 'employee_database' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <a href="{% url 'employee_database' %}" class="flex items-center justify-center text-indigo-600 hover:text-indigo-800 transition-all w-full sm:w-auto">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Employee Database
                 </a>
             </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h3 class="text-xl font-semibold">Performance Review Templates</h3>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h3 class="text-lg sm:text-xl font-semibold">Performance Review Templates</h3>
             </div>
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 {% if templates %}
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto -mx-4 sm:mx-0">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                                    <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 {% for template in templates %}
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ template.name }}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">{{ template.description|default:"No description" }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ template.created_by|default:"Unknown" }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ template.created_at|date:"F d, Y" }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <a href="{% url 'view_template_details' template.id %}" class="text-indigo-600 hover:text-indigo-800">View Details</a>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 sm:px-6 py-4 text-sm text-gray-900">
+                                            {{ template.name }}
+                                            <!-- Mobile-only info -->
+                                            <div class="sm:hidden mt-1 text-xs text-gray-500 space-y-1">
+                                                <p>{{ template.description|default:"No description"|truncatechars:100 }}</p>
+                                                <p>Created by: {{ template.created_by|default:"Unknown" }}</p>
+                                                <p>{{ template.created_at|date:"F d, Y" }}</p>
+                                            </div>
+                                        </td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 text-sm text-gray-900">{{ template.description|default:"No description" }}</td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 text-sm text-gray-900">{{ template.created_by|default:"Unknown" }}</td>
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 text-sm text-gray-900">{{ template.created_at|date:"F d, Y" }}</td>
+                                        <td class="px-3 sm:px-6 py-4 text-sm">
+                                            <a href="{% url 'view_template_details' template.id %}" 
+                                               class="inline-flex items-center text-indigo-600 hover:text-indigo-800">
+                                                <i class="fas fa-eye mr-1"></i>
+                                                <span>View</span>
+                                            </a>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -47,7 +60,10 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-sm text-gray-500">No performance review templates found.</p>
+                    <div class="text-center py-8">
+                        <i class="fas fa-clipboard-list text-gray-400 text-3xl mb-3"></i>
+                        <p class="text-sm text-gray-500">No performance review templates found.</p>
+                    </div>
                 {% endif %}
             </div>
         </div>

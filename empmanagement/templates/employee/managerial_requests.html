@@ -1,21 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Managerial Requests</h2>
-                <div class="flex space-x-3">
+    <section class="py-6 sm:py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Managerial Requests</h2>
+                <div class="w-full sm:w-auto">
                     <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>
                 </div>
             </div>
 
+            <!-- Messages Section -->
             {% if messages %}
-                <div class="mb-6">
+                <div class="mb-6 space-y-3">
                     {% for message in messages %}
-                        <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <div class="p-4 rounded-lg flex items-center text-sm sm:text-base {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
                             <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
                             {{ message }}
                         </div>
@@ -23,40 +25,47 @@
                 </div>
             {% endif %}
             
+            <!-- Pending Approvals Card -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Pending Approvals</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Pending Approvals</h2>
                 </div>
                 
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     {% if pending_tasks %}
-                        <div class="space-y-4">
+                        <div class="space-y-6">
                             {% for task in pending_tasks %}
-                                <div class="border-b border-gray-200 pb-4 mb-4 flex flex-col md:flex-row md:justify-between md:items-center">
-                                    <div class="mb-3 md:mb-0">
-                                        <p class="font-medium text-gray-800">{{ task.work|truncatewords:20 }}</p>
-                                        <div class="mt-2 flex flex-wrap gap-3">
-                                            <span class="inline-flex items-center text-sm text-gray-600">
-                                                <i class="fas fa-user mr-2 text-indigo-500"></i>Assigned to: {{ task.taskerId }}
+                                <div class="border-b border-gray-200 pb-6 flex flex-col space-y-4">
+                                    <div class="flex flex-col space-y-3">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">{{ task.work|truncatewords:20 }}</p>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                                            <span class="inline-flex items-center text-xs sm:text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg">
+                                                <i class="fas fa-user mr-2 text-indigo-500"></i>
+                                                <span class="truncate">Assigned to: {{ task.taskerId }}</span>
                                             </span>
-                                            <span class="inline-flex items-center text-sm text-gray-600">
-                                                <i class="fas fa-paper-plane mr-2 text-indigo-500"></i>By: {{ task.assignerId }}
+                                            <span class="inline-flex items-center text-xs sm:text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg">
+                                                <i class="fas fa-paper-plane mr-2 text-indigo-500"></i>
+                                                <span class="truncate">By: {{ task.assignerId }}</span>
                                             </span>
-                                            <span class="inline-flex items-center text-sm text-gray-600">
-                                                <i class="fas fa-calendar mr-2 text-indigo-500"></i>Due: {{ task.dueDate|date:"Y-m-d" }}
+                                            <span class="inline-flex items-center text-xs sm:text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg">
+                                                <i class="fas fa-calendar mr-2 text-indigo-500"></i>
+                                                <span>Due: {{ task.dueDate|date:"Y-m-d" }}</span>
                                             </span>
                                         </div>
                                     </div>
-                                    <a href="{% url 'approve_work' task.Id %}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                                        <i class="fas fa-check mr-2"></i>Review & Approve
-                                    </a>
+                                    <div class="flex justify-end">
+                                        <a href="{% url 'approve_work' task.Id %}" 
+                                           class="w-full sm:w-auto flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                            <i class="fas fa-check mr-2"></i>Review & Approve
+                                        </a>
+                                    </div>
                                 </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <div class="flex flex-col items-center justify-center py-12 text-center">
-                            <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
-                            <p class="text-gray-600">No pending approvals at this time.</p>
+                        <div class="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                            <i class="fas fa-clipboard-check text-3xl sm:text-4xl text-gray-300 mb-3"></i>
+                            <p class="text-sm sm:text-base text-gray-600">No pending approvals at this time.</p>
                         </div>
                     {% endif %}
                 </div>

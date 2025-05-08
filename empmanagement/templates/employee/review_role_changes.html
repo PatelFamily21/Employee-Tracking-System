@@ -1,25 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Review Pending Role Changes</h2>
-                <div class="flex space-x-3">
-                    <a href="{% url 'manage_roles' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+    <section class="py-6 sm:py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-3 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Review Pending Role Changes</h2>
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <a href="{% url 'manage_roles' %}" class="flex items-center justify-center text-indigo-600 hover:text-indigo-800 transition-all">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Manage Roles
                     </a>
-                    <a href="{% url 'role_change_history' %}" class="flex items-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm">
+                    <a href="{% url 'role_change_history' %}" class="flex items-center justify-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm w-full sm:w-auto">
                         <i class="fas fa-history mr-2"></i>Role History
                     </a>
                 </div>
             </div>
 
-            
-
-            <!-- Pending Role Changes Table Card -->
+            <!-- Pending Role Changes Card -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 {% if page_obj %}
-                    <div class="overflow-x-auto">
+                    <!-- Mobile View -->
+                    <div class="block sm:hidden">
+                        <div class="divide-y divide-gray-200">
+                            {% for pending in page_obj %}
+                                <div class="p-4">
+                                    <div class="flex items-center mb-3">
+                                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold">
+                                            {{ pending.employee.firstName|first }}{{ pending.employee.lastName|first }}
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-gray-900">{{ pending.employee.firstName }} {{ pending.employee.lastName }}</div>
+                                            <div class="text-xs text-gray-500">ID: {{ pending.employee.eID }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2 mb-3">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-500">Old Role:</span>
+                                            <span class="px-2 py-1 text-xs rounded-full {% if pending.old_role == 'admin' %}bg-purple-100 text-purple-800{% elif pending.old_role == 'manager' %}bg-green-100 text-green-800{% elif pending.old_role == 'supervisor' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %} font-medium">
+                                                {{ pending.old_role|title }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-500">New Role:</span>
+                                            <span class="px-2 py-1 text-xs rounded-full {% if pending.new_role == 'admin' %}bg-purple-100 text-purple-800{% elif pending.new_role == 'manager' %}bg-green-100 text-green-800{% elif pending.new_role == 'supervisor' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %} font-medium">
+                                                {{ pending.new_role|title }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-500">Requested By:</span>
+                                            <span class="text-xs text-gray-700">{{ pending.requested_by.firstName }} {{ pending.requested_by.lastName }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-500">Date:</span>
+                                            <span class="text-xs text-gray-700">{{ pending.request_date|date:"Y-m-d H:i" }}</span>
+                                        </div>
+                                    </div>
+                                    <form method="post" class="flex space-x-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="pending_id" value="{{ pending.id }}">
+                                        <button type="submit" name="action" value="approve" class="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-all flex items-center justify-center">
+                                            <i class="fas fa-check mr-1"></i>Approve
+                                        </button>
+                                        <button type="submit" name="action" value="reject" class="flex-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all flex items-center justify-center">
+                                            <i class="fas fa-times mr-1"></i>Reject
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Desktop View -->
+                    <div class="hidden sm:block overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="bg-gray-50 border-b border-gray-200">
@@ -87,9 +138,10 @@
                         </table>
                     </div>
 
-                    {% if page_obj.has_other_pages %}
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                            <div class="text-sm text-gray-700">
+                    <!-- Pagination -->
+                    <div class="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+                            <div class="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
                                 Showing <span class="font-medium">{{ page_obj.start_index }}</span> to 
                                 <span class="font-medium">{{ page_obj.end_index }}</span> of 
                                 <span class="font-medium">{{ page_obj.paginator.count }}</span> pending requests
@@ -118,7 +170,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                    {% endif %}
+                    </div>
                 {% else %}
                     <div class="flex flex-col items-center justify-center py-16">
                         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4">

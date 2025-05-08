@@ -71,21 +71,40 @@ from django import forms
 from django.db import models
 from .models import Requests, Employee
 
+from django import forms
+from .models import Employee, Department, Requests
+from django.utils import timezone
+import django.db.models as models
+
+from django import forms
+from .models import Employee, Department, Requests
+from django.utils import timezone
+import django.db.models as models
+
 class makeRequestForm(forms.ModelForm):
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        label="Department (optional)",
+        empty_label="Select Department or Choose Specific Recipient",
+        to_field_name="dept_id"  # Use dept_id as the value
+    )
     destination_employee = forms.ModelChoiceField(
         queryset=Employee.objects.all(),
-        required=True,
-        label="Recipient"
+        required=False,
+        label="Recipient",
+        empty_label="Select Recipient (or leave blank to send to all in department)"
     )
 
     class Meta:
         model = Requests
-        fields = ["request_type", "request_message", "request_date", "destination_employee", "request_file"]
+        fields = ["request_type", "request_message", "request_date", "department", "destination_employee", "request_file"]
         widgets = {
             "request_date": forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             "request_message": forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded-md'}),
             "request_type": forms.Select(attrs={'class': 'w-full p-2 border rounded-md'}),
             "request_file": forms.FileInput(attrs={'class': 'w-full p-2 border rounded-md'}),
+            "department": forms.Select(attrs={'class': 'w-full p-2 border rounded-md'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -93,85 +112,114 @@ class makeRequestForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.request and self.request.user.is_authenticated:
             employee = Employee.objects.get(eID=self.request.user.username)
-            # Use the form's data if available (POST), otherwise use initial data (GET)
             request_type = self.data.get('request_type') if self.is_bound else self.initial.get('request_type', 'other')
-            
+            department = self.data.get('department') if self.is_bound else self.initial.get('department')
+
             if employee.role == 'employee':
+                self.fields['department'].widget = forms.HiddenInput()
                 if request_type in ['resource', 'support', 'approval']:
                     self.fields['destination_employee'].queryset = Employee.objects.filter(
-                        models.Q(department=employee.department, role='manager') |  # Department manager
-                        models.Q(department=employee.department, role='employee')  # Department members
+                        department=employee.department, role='manager'
                     ).exclude(eID=employee.eID)
-                else:  # 'other' request type
-                    self.fields['destination_employee'].queryset = Employee.objects.filter(
-                        models.Q(role='hr') | models.Q(role='admin')
-                    )
+                else:  # 'other'
+                    self.fields['destination_employee'].queryset = Employee.objects.filter(role='hr')
             elif employee.role == 'manager':
                 if request_type in ['resource', 'support', 'approval']:
                     self.fields['destination_employee'].queryset = Employee.objects.filter(
-                        department=employee.department,
-                        role='employee'
-                    )
-                else:  # 'other' request type
-                    self.fields['destination_employee'].queryset = Employee.objects.filter(
-                        models.Q(role='manager') | models.Q(role='hr') | models.Q(role='admin')
+                        department=employee.department, role='employee'
                     ).exclude(eID=employee.eID)
-            elif employee.role == 'hr':
-                self.fields['destination_employee'].queryset = Employee.objects.all().exclude(eID=employee.eID)
-            elif employee.role == 'admin':
-                self.fields['destination_employee'].queryset = Employee.objects.filter(
-                    models.Q(role='manager') | models.Q(role='employee')
-                ).exclude(eID=employee.eID)
+                    self.fields['department'].widget = forms.HiddenInput()
+                else:  # 'other'
+                    self.fields['department'].queryset = Department.objects.all()
+                    if department:
+                        dept = Department.objects.filter(dept_id=department).first()
+                        if dept:
+                            self.fields['destination_employee'].queryset = Employee.objects.filter(
+                                department=dept, role='manager'
+                            ).exclude(eID=employee.eID)
+                        else:
+                            self.fields['destination_employee'].queryset = Employee.objects.filter(
+                                models.Q(role='manager') | models.Q(role='hr') | models.Q(role='admin')
+                            ).exclude(eID=employee.eID)
+                    else:
+                        self.fields['destination_employee'].queryset = Employee.objects.filter(
+                            models.Q(role='manager') | models.Q(role='hr') | models.Q(role='admin')
+                        ).exclude(eID=employee.eID)
+            elif employee.role in ['hr', 'admin']:
+                self.fields['department'].queryset = Department.objects.all()
+                if department:
+                    dept = Department.objects.filter(dept_id=department).first()
+                    if dept:
+                        self.fields['destination_employee'].queryset = Employee.objects.filter(
+                            department=dept
+                        ).exclude(eID=employee.eID)
+                    else:
+                        self.fields['destination_employee'].queryset = Employee.objects.all().exclude(eID=employee.eID)
+                else:
+                    self.fields['destination_employee'].queryset = Employee.objects.all().exclude(eID=employee.eID)
+            else:
+                self.fields['destination_employee'].queryset = Employee.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()
         destination_employee = cleaned_data.get('destination_employee')
         request_type = cleaned_data.get('request_type')
+        department = cleaned_data.get('department')
+        employee = Employee.objects.get(eID=self.request.user.username)
 
-        if self.request and self.request.user.is_authenticated:
-            employee = Employee.objects.get(eID=self.request.user.username)
-
-            # Validate that destination_employee is not None
+        # Validate department exists - this is now a model instance if it exists
+        # No need to do another filter check since ModelChoiceField already ensures it exists
+        
+        if employee.role == 'employee':
+            if department:
+                raise forms.ValidationError("Employees cannot select a department for requests.")
             if not destination_employee:
                 raise forms.ValidationError("Please select a recipient for your request.")
-
             if employee == destination_employee:
                 raise forms.ValidationError("You cannot send a request to yourself.")
-
-            # Validate recipient based on request type and role
-            if employee.role == 'employee':
-                if request_type in ['resource', 'support', 'approval']:
-                    # Must be within the same department (manager or employee)
-                    if destination_employee.department != employee.department:
-                        raise forms.ValidationError("For this request type, the recipient must be your department manager or a fellow department member.")
-                    if destination_employee.role not in ['manager', 'employee']:
-                        raise forms.ValidationError("For this request type, the recipient must be your department manager or a fellow department member.")
-                else:  # 'other' request type
-                    if destination_employee.role not in ['hr', 'admin']:
-                        raise forms.ValidationError("Special requests can only be sent to HR or Admin.")
-            elif employee.role == 'manager':
-                if request_type in ['resource', 'support', 'approval']:
-                    # Must be a department member (role='employee')
-                    if destination_employee.department != employee.department or destination_employee.role != 'employee':
-                        raise forms.ValidationError("For this request type, the recipient must be a department member with the 'employee' role.")
-                else:  # 'other' request type
-                    if destination_employee.role not in ['manager', 'hr', 'admin']:
+            if request_type in ['resource', 'support', 'approval']:
+                if destination_employee.department != employee.department or destination_employee.role != 'manager':
+                    raise forms.ValidationError("For this request type, the recipient must be your department manager.")
+                if request_type == 'approval':
+                    cleaned_data['escalate_to_hr'] = True
+            else:  # 'other'
+                if destination_employee.role != 'hr':
+                    raise forms.ValidationError("Special requests must be sent to HR initially.")
+        elif employee.role == 'manager':
+            if request_type in ['resource', 'support', 'approval']:
+                if department:
+                    raise forms.ValidationError("Department selection is not allowed for this request type.")
+                if destination_employee and (destination_employee.department != employee.department or destination_employee.role != 'employee'):
+                    raise forms.ValidationError("For this request type, the recipient must be a department member with the 'employee' role.")
+            else:  # 'other'
+                if destination_employee:
+                    if employee == destination_employee:
+                        raise forms.ValidationError("You cannot send a request to yourself.")
+                    if destination_employee.role == 'manager':
+                        if not department:
+                            raise forms.ValidationError("Please select a department when sending to a fellow manager.")
+                        # No need to check if department exists again
+                        if destination_employee.department != department:
+                            raise forms.ValidationError("The selected manager must be from the chosen department.")
+                    elif destination_employee.role not in ['hr', 'admin']:
                         raise forms.ValidationError("Special requests can only be sent to other managers, HR, or Admins.")
-            elif employee.role == 'hr':
-                # HR can send to anyone, so no additional validation needed
-                pass
-            elif employee.role == 'admin':
-                if destination_employee.role not in ['manager', 'employee']:
-                    raise forms.ValidationError("Admins can only send requests to managers or employees.")
+        elif employee.role in ['hr', 'admin']:
+            # No need to check if department exists again
+            if department and destination_employee and destination_employee.department != department:
+                raise forms.ValidationError("The selected recipient must be from the chosen department.")
+            if not department and not destination_employee:
+                raise forms.ValidationError("Please select a department or a specific recipient.")
+            if employee == destination_employee:
+                raise forms.ValidationError("You cannot send a request to yourself.")
 
         return cleaned_data
 
 
 
-# employee/forms.py
 from django import forms
 from .models import Employee, Department, EmergencyContact, Document
 import re
+from django.utils import timezone
 
 class EmployeeForm(forms.ModelForm):
     inferred_role = forms.CharField(
@@ -183,7 +231,7 @@ class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
         fields = [
-            'eID','firstName', 'middleName', 'lastName', 'phoneNo', 'email',
+            'firstName', 'middleName', 'lastName', 'phoneNo', 'email',
             'addharNo', 'dOB', 'designation', 'salary', 'joinDate',
             'department', 'can_assign_cross_department'
         ]
@@ -194,7 +242,6 @@ class EmployeeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['eID'].required = False
         if 'designation' in self.data:
             designation = self.data.get('designation', '').strip().title()
             if designation == 'HR':
@@ -231,6 +278,7 @@ class EmployeeForm(forms.ModelForm):
                 'can_assign_cross_department': "Employees with the 'employee' role cannot assign tasks across departments."
             })
 
+        # Validate phone number
         phone_no = cleaned_data.get('phoneNo')
         if phone_no:
             phone_pattern = r'^\+?\d{10,12}$'
@@ -239,17 +287,42 @@ class EmployeeForm(forms.ModelForm):
                     'phoneNo': "Phone number must be 10-12 digits, optionally starting with a '+'."
                 })
 
+        # Validate date of birth
         dob = cleaned_data.get('dOB')
         if dob and dob > timezone.now().date():
             raise forms.ValidationError({
                 'dOB': "Date of birth cannot be in the future."
             })
 
+        # Validate join date
         join_date = cleaned_data.get('joinDate')
         if join_date and join_date > timezone.now().date():
             raise forms.ValidationError({
                 'joinDate': "Join date cannot be in the future."
             })
+
+        # Validate salary (must be numeric and less than 1,000,000)
+        salary = cleaned_data.get('salary')
+        if salary:
+            # Ensure salary is numeric
+            try:
+                salary_value = int(salary.replace(',', ''))  # Handle comma-separated input (e.g., "123,456")
+                if salary_value >= 1000000:
+                    raise forms.ValidationError({
+                        'salary': "Salary cannot exceed 6 figures (1,000,000 Kenyan Shillings)."
+                    })
+            except ValueError:
+                raise forms.ValidationError({
+                    'salary': "Salary must be a valid number."
+                })
+
+        # Validate email (must end with @gmail.com or @yahoo.com)
+        email = cleaned_data.get('email')
+        if email:
+            if not (email.lower().endswith('@gmail.com') or email.lower().endswith('@yahoo.com')):
+                raise forms.ValidationError({
+                    'email': "Email must end with @gmail.com or @yahoo.com."
+                })
 
         return cleaned_data
 
@@ -321,14 +394,16 @@ class PerformanceReviewTemplateForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 4}),
         }
 
+from django import forms
+from .models import ReviewQuestion
+
 class ReviewQuestionForm(forms.ModelForm):
     class Meta:
         model = ReviewQuestion
-        fields = ['question_text', 'question_type', 'order']
+        fields = ['question_text', 'question_type']  # Removed 'order'
         widgets = {
             'question_text': forms.TextInput(attrs={'class': 'w-full'}),
             'question_type': forms.Select(attrs={'class': 'w-full'}),
-            'order': forms.NumberInput(attrs={'class': 'w-full'}),
         }
 
 class PerformanceReviewScheduleForm(forms.ModelForm):
@@ -411,13 +486,20 @@ from .models import Department
 class CustomReportForm(forms.Form):
     MODEL_CHOICES = [
         ('Employee', 'Employee'),
+        ('Document', 'Document'),
         ('Attendance', 'Attendance'),
         ('LeaveRequest', 'Leave Request'),
         ('PerformanceReview', 'Performance Review'),
         ('WorkAssignments', 'Work Assignments'),
         ('RoleChangeLog', 'Role Change Log'),
-        ('Notice', 'Notices'),
-        ('Document', 'Documents'),  # Added Document model
+        ('Notice', 'Notice'),
+        ('EmergencyContact', 'Emergency Contact'),
+        ('Notification', 'Notification'),
+        ('IssueReport', 'Issue Report'),
+        ('Requests', 'Requests'),
+        ('WorkAssignmentLog', 'Work Assignment Log'),
+        ('PendingRoleChange', 'Pending Role Change'),
+        ('IssueComment', 'Issue Comment'),
     ]
 
     AGGREGATION_CHOICES = [
@@ -429,62 +511,101 @@ class CustomReportForm(forms.Form):
         ('max', 'Maximum'),
     ]
 
-    model = forms.ChoiceField(choices=MODEL_CHOICES, label="Select Model")
-    fields = forms.MultipleChoiceField(choices=[], label="Select Fields to Display", widget=forms.CheckboxSelectMultiple)
-    date_field = forms.ChoiceField(choices=[], label="Date Field for Filtering", required=False)
-    start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
-    end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
-    status_field = forms.ChoiceField(choices=[], label="Status Field for Filtering", required=False)
-    status_value = forms.ChoiceField(choices=[], label="Status Value", required=False)
+    model = forms.ChoiceField(choices=MODEL_CHOICES, label="Model")
+    fields = forms.MultipleChoiceField(choices=[], label="Fields to Display", widget=forms.CheckboxSelectMultiple)
+    date_field = forms.ChoiceField(choices=[], label="Date Field", required=False)
+    start_date = forms.DateField(label="Start Date", required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    end_date = forms.DateField(label="End Date", required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    status_field = forms.ChoiceField(choices=[], label="Status Field", required=False)
+    status_value = forms.CharField(label="Status Value", required=False)
     aggregation = forms.ChoiceField(choices=AGGREGATION_CHOICES, label="Aggregation", required=False)
-    aggregation_field = forms.ChoiceField(choices=[], label="Field to Aggregate", required=False)
-    department = forms.ModelChoiceField(
-        queryset=Department.objects.all(),
-        label="Filter by Department",
-        required=False
-    )
+    aggregation_field = forms.ChoiceField(choices=[], label="Aggregation Field", required=False)
+    department = forms.ModelChoiceField(queryset=Department.objects.all(), label="Department", required=False)
     is_urgent = forms.BooleanField(label="Urgent Notices Only", required=False)
     feedback_satisfactory = forms.BooleanField(label="Satisfactory Feedback Only", required=False)
 
-    def __init__(self, *args, request=None, **kwargs):
-        self.request = request  # Store request to access user role
+    def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        model_name = self.data.get('model') if self.data else self.initial.get('model', 'Employee')
-        if model_name:
-            model = apps.get_model('employee', model_name)
-            
-            # Dynamically set field choices, excluding sensitive fields for non-HR/admin
-            current_employee = Employee.objects.get(eID=self.request.user.username) if self.request else None
-            field_choices = []
-            for f in model._meta.fields:
-                # Skip sensitive fields for non-HR/admin users
-                if model_name == 'Document' and f.name == 'file' and current_employee and current_employee.role not in ['hr', 'admin']:
-                    continue
-                field_choices.append((f.name, f.verbose_name or f.name.replace('_', ' ').title()))
-            self.fields['fields'].choices = field_choices
 
-            # Date fields for filtering
-            date_fields = [(f.name, f.verbose_name or f.name.replace('_', ' ').title()) for f in model._meta.fields if isinstance(f, (models.DateField, models.DateTimeField))]
-            self.fields['date_field'].choices = [('', 'None')] + date_fields
+        # Get the selected model from POST data or default to the first model
+        model_name = self.data.get('model') if self.data else self.MODEL_CHOICES[0][0]
+        model = apps.get_model('employee', model_name)
 
-            # Status fields for filtering (CharField with choices)
-            status_fields = [(f.name, f.verbose_name or f.name.replace('_', ' ').title()) for f in model._meta.fields if isinstance(f, models.CharField) and f.choices]
-            self.fields['status_field'].choices = [('', 'None')] + status_fields
+        # Populate fields choices
+        field_choices = []
+        for field in model._meta.get_fields():
+            if field.name not in ['id', 'password'] and not field.is_relation:
+                field_choices.append((field.name, field.verbose_name or field.name.replace('_', ' ').title()))
+        self.fields['fields'].choices = field_choices
 
-            # Update status value choices based on selected status field
-            status_field_name = self.data.get('status_field') if self.data else None
-            if status_field_name:
-                field = model._meta.get_field(status_field_name)
-                self.fields['status_value'].choices = field.choices
+        # Populate date_field choices (only DateField and DateTimeField)
+        date_field_choices = [('', 'None')]
+        for field in model._meta.get_fields():
+            if isinstance(field, (models.DateField, models.DateTimeField)):
+                date_field_choices.append((field.name, field.verbose_name or field.name.replace('_', ' ').title()))
+        self.fields['date_field'].choices = date_field_choices
 
-            # Aggregation field choices
-            numeric_fields = [(f.name, f.verbose_name or f.name.replace('_', ' ').title()) for f in model._meta.fields if isinstance(f, (models.IntegerField, models.FloatField))]
-            self.fields['aggregation_field'].choices = [('', 'None')] + numeric_fields
+        # Populate status_field choices (only CharField that might represent status)
+        status_field_choices = [('', 'None')]
+        for field in model._meta.get_fields():
+            if isinstance(field, models.CharField) and 'status' in field.name.lower():
+                status_field_choices.append((field.name, field.verbose_name or field.name.replace('_', ' ').title()))
+        self.fields['status_field'].choices = status_field_choices
 
-            # Show/hide filters based on model
-            self.fields['department'].widget.attrs['class'] = 'department-filter hidden' if model_name not in ['Employee', 'Attendance', 'LeaveRequest', 'PerformanceReview', 'WorkAssignments'] else 'department-filter'
-            self.fields['is_urgent'].widget.attrs['class'] = 'is-urgent-filter hidden' if model_name != 'Notice' else 'is-urgent-filter'
-            self.fields['feedback_satisfactory'].widget.attrs['class'] = 'feedback-satisfactory-filter hidden' if model_name != 'WorkAssignments' else 'feedback-satisfactory-filter'
+        # Populate aggregation_field choices (numeric fields for avg/sum, any field for count/min/max)
+        aggregation_field_choices = [('', 'None')]
+        for field in model._meta.get_fields():
+            if not field.is_relation and field.name not in ['id', 'password']:
+                aggregation_field_choices.append((field.name, field.verbose_name or field.name.replace('_', ' ').title()))
+        self.fields['aggregation_field'].choices = aggregation_field_choices
+
+    def clean(self):
+        cleaned_data = super().clean()
+        model_name = cleaned_data.get('model')
+        status_field = cleaned_data.get('status_field')
+        status_value = cleaned_data.get('status_value')
+        date_field = cleaned_data.get('date_field')
+        aggregation = cleaned_data.get('aggregation')
+        aggregation_field = cleaned_data.get('aggregation_field')
+
+        if not model_name:
+            return cleaned_data
+
+        model = apps.get_model('employee', model_name)
+
+        # Validate status_field
+        if status_field:
+            try:
+                field = model._meta.get_field(status_field)
+                if not isinstance(field, models.CharField):
+                    self.add_error('status_field', f"{status_field} is not a valid status field for {model_name}.")
+            except models.FieldDoesNotExist:
+                self.add_error('status_field', f"{status_field} does not exist in {model_name}.")
+
+        # Validate status_value
+        if status_field and not status_value:
+            self.add_error('status_value', "Please provide a status value when a status field is selected.")
+
+        # Validate date_field
+        if date_field:
+            try:
+                field = model._meta.get_field(date_field)
+                if not isinstance(field, (models.DateField, models.DateTimeField)):
+                    self.add_error('date_field', f"{date_field} is not a valid date field for {model_name}.")
+            except models.FieldDoesNotExist:
+                self.add_error('date_field', f"{date_field} does not exist in {model_name}.")
+
+        # Validate aggregation_field
+        if aggregation and aggregation_field:
+            try:
+                field = model._meta.get_field(aggregation_field)
+                if aggregation in ['avg', 'sum'] and not isinstance(field, (models.IntegerField, models.FloatField)):
+                    self.add_error('aggregation_field', f"{aggregation_field} is not a numeric field for {aggregation}.")
+            except models.FieldDoesNotExist:
+                self.add_error('aggregation_field', f"{aggregation_field} does not exist in {model_name}.")
+
+        return cleaned_data
 
 
 from django import forms

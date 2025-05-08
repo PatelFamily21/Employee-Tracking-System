@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Assign New Work</h2>
+<section class="py-6 md:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 md:mb-6">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">Assign New Work</h2>
             <div class="flex space-x-3">
                 <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
@@ -11,26 +11,26 @@
             </div>
         </div>
         {% if messages %}
-                <div class="mb-6">
-                    {% for message in messages %}
-                        <div class="mb-4 p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
-                            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            <div class="mb-4 md:mb-6">
+                {% for message in messages %}
+                    <div class="mb-3 p-3 md:p-4 rounded-lg flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-700 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-700 border-l-4 border-blue-500{% endif %}">
+                        <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% else %}fas fa-info-circle{% endif %} mr-3 text-lg"></i>
+                        <span class="text-sm md:text-base">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold flex items-center">
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-3 md:py-4">
+                <h2 class="text-lg md:text-xl font-semibold flex items-center">
                     <i class="fas fa-clipboard-list mr-2"></i>Work Assignment Details
                 </h2>
             </div>
             
-            <div class="p-6">
+            <div class="p-4 md:p-6">
                 <!-- Department Filter Card -->
-                <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
-                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Filter Options</h3>
+                <div class="bg-gray-50 p-4 md:p-5 rounded-lg mb-5 md:mb-6 border border-gray-200">
+                    <h3 class="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Filter Options</h3>
                     <div class="mb-2">
                         <label for="id_department" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                             <i class="fas fa-filter mr-2"></i>
@@ -50,7 +50,7 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
                         {% for field in form %}
                             {% if field.name != 'department' %}
                                 {% if field.name == 'work' or field.name == 'description' %}
@@ -58,7 +58,7 @@
                                 {% else %}
                                     <div>
                                 {% endif %}
-                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1 md:mb-2 flex items-center">
                                         {% if field.name == 'taskerId' %}
                                             <i class="fas fa-user mr-2 text-gray-500"></i>
                                         {% elif field.name == 'work' %}
@@ -101,12 +101,12 @@
                     </div>
                     
                     <!-- Tips Box -->
-                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
-                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                    <div class="bg-gray-50 p-4 md:p-5 rounded-lg mb-5 md:mb-6 border border-gray-200">
+                        <h3 class="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mb-2 md:mb-3 flex items-center">
                             <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
                             Assignment Tips
                         </h3>
-                        <ul class="text-sm text-gray-600 space-y-2 ml-6 list-disc">
+                        <ul class="text-xs md:text-sm text-gray-600 space-y-1 md:space-y-2 ml-4 md:ml-6 list-disc">
                             <li>Be specific about task requirements</li>
                             <li>Set realistic deadlines</li>
                             <li>Consider employee workload</li>
@@ -114,11 +114,11 @@
                     </div>
                     
                     <!-- Action Buttons -->
-                    <div class="flex mt-6">
-                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                    <div class="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
+                        <button type="submit" class="w-full sm:w-auto flex items-center justify-center py-2 px-4 sm:px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                             <i class="fas fa-paper-plane mr-2"></i>Assign Work
                         </button>
-                        <a href="{% url 'dashboard' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                        <a href="{% url 'dashboard' %}" class="w-full sm:w-auto flex items-center justify-center py-2 px-4 sm:px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                             Cancel
                         </a>
                     </div>
@@ -135,11 +135,16 @@
 
         // Apply Tailwind classes to all form elements
         document.querySelectorAll('select, input, textarea').forEach(element => {
-            element.classList.add('w-full', 'px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
+            element.classList.add('w-full', 'px-3', 'sm:px-4', 'py-2', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent', 'text-sm', 'md:text-base');
             
             if (element.tagName === 'TEXTAREA') {
                 element.setAttribute('rows', '4');
                 element.setAttribute('placeholder', 'Enter detailed description of the work...');
+            }
+            
+            // Add touch-friendly styling for mobile inputs
+            if (element.tagName === 'SELECT' || element.type === 'date') {
+                element.classList.add('appearance-none');
             }
         });
 
@@ -163,8 +168,41 @@
         // Focus first visible field
         const firstField = document.querySelector('form select:not(#id_department), form input:not([type="hidden"]), form textarea');
         if (firstField) {
-            firstField.focus();
+            setTimeout(function() {
+                // Delay focus on mobile to prevent keyboard from popping up immediately
+                if (window.innerWidth > 768) {
+                    firstField.focus();
+                }
+            }, 300);
         }
+        
+        // Add touch-friendly mobile enhancements
+        const enhanceMobileExperience = function() {
+            // Add smooth scrolling to form fields on mobile
+            const formFields = document.querySelectorAll('input, select, textarea');
+            formFields.forEach(field => {
+                field.addEventListener('focus', function() {
+                    if (window.innerWidth <= 768) {
+                        // Add a slight delay before scrolling to prevent jumping
+                        setTimeout(() => {
+                            const fieldRect = this.getBoundingClientRect();
+                            const fieldTop = fieldRect.top + window.pageYOffset;
+                            window.scrollTo({
+                                top: fieldTop - 120,
+                                behavior: 'smooth'
+                            });
+                        }, 300);
+                    }
+                });
+            });
+        };
+        
+        enhanceMobileExperience();
+        
+        // Handle viewport changes
+        window.addEventListener('resize', function() {
+            enhanceMobileExperience();
+        });
     });
 </script>
 {% endblock %}

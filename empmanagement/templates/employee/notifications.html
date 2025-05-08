@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Notifications</h2>
-            <div class="flex space-x-3">
-                <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                </a>
-            </div>
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-3 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Notifications</h2>
+            <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
         </div>
 
         <!-- Messages -->
@@ -24,36 +23,40 @@
             </div>
         {% endif %}
 
-        <!-- Notifications List -->
+        <!-- Notifications Card -->
         <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Your Notifications</h2>
+            <!-- Card Header -->
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+                <h2 class="text-lg sm:text-xl font-semibold">Your Notifications</h2>
                 {% if page_obj %}
-                    <form method="post" class="inline">
+                    <form method="post" class="w-full sm:w-auto">
                         {% csrf_token %}
-                        <button type="submit" name="action" value="mark_all_read" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 font-medium text-sm">
-                            Mark All as Read
+                        <button type="submit" name="action" value="mark_all_read" 
+                                class="w-full sm:w-auto bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 font-medium text-sm flex items-center justify-center">
+                            <i class="fas fa-check-double mr-2"></i>Mark All as Read
                         </button>
                     </form>
                 {% endif %}
             </div>
             
-            <div class="p-6">
-                <div class="overflow-x-auto">
+            <div class="p-4 sm:p-6">
+                <!-- Mobile-friendly table wrapper -->
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                                <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             {% for notification in page_obj %}
                                 <tr class="{% if not notification.is_read %}bg-indigo-50{% endif %} hover:bg-gray-100 transition-all">
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <!-- Type Column -->
+                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                         {% if notification.request_type == 'leave_request' %}
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                 <i class="fas fa-calendar-alt mr-1"></i> Leave Request
@@ -108,17 +111,40 @@
                                             </span>
                                         {% endif %}
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
+                                    
+                                    <!-- Message Column -->
+                                    <td class="px-3 sm:px-6 py-4">
                                         {% if not notification.is_read %}
-                                            <div class="font-medium">{{ notification.message|safe }}</div>
+                                            <div class="font-medium text-sm">{{ notification.message|safe }}</div>
                                         {% else %}
-                                            <div>{{ notification.message|safe }}</div>
+                                            <div class="text-sm">{{ notification.message|safe }}</div>
                                         {% endif %}
+                                        <!-- Mobile-only date and status -->
+                                        <div class="sm:hidden mt-2 space-y-1">
+                                            <div class="text-xs text-gray-500">
+                                                {{ notification.created_at|date:"Y-m-d H:i" }}
+                                            </div>
+                                            <div>
+                                                {% if notification.is_read %}
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        <i class="fas fa-check-circle mr-1"></i>Read
+                                                    </span>
+                                                {% else %}
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                        <i class="fas fa-circle mr-1"></i>Unread
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    
+                                    <!-- Date Column (hidden on mobile) -->
+                                    <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ notification.created_at|date:"Y-m-d H:i" }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    
+                                    <!-- Status Column (hidden on mobile) -->
+                                    <td class="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
                                         {% if notification.is_read %}
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                 <i class="fas fa-check-circle mr-1"></i> Read
@@ -129,13 +155,17 @@
                                             </span>
                                         {% endif %}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    
+                                    <!-- Actions Column -->
+                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         {% if not notification.is_read %}
                                             <form method="post" class="inline">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="notification_id" value="{{ notification.id }}">
-                                                <button type="submit" name="action" value="mark_read" class="text-indigo-600 hover:text-indigo-800 font-medium transition-all">
-                                                    Mark as Read
+                                                <button type="submit" name="action" value="mark_read" 
+                                                        class="text-indigo-600 hover:text-indigo-800 font-medium transition-all">
+                                                    <span class="hidden sm:inline">Mark as Read</span>
+                                                    <i class="fas fa-check sm:hidden"></i>
                                                 </button>
                                             </form>
                                         {% else %}
@@ -145,10 +175,10 @@
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                    <td colspan="5" class="px-3 sm:px-6 py-8 text-center text-gray-500">
                                         <div class="flex flex-col items-center">
-                                            <i class="fas fa-bell-slash text-3xl mb-2 text-gray-400"></i>
-                                            <p>No notifications found</p>
+                                            <i class="fas fa-bell-slash text-2xl sm:text-3xl mb-2 text-gray-400"></i>
+                                            <p class="text-sm">No notifications found</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -159,33 +189,37 @@
 
                 <!-- Pagination Controls -->
                 {% if page_obj.has_other_pages %}
-                    <div class="mt-6 flex flex-col sm:flex-row justify-between items-center">
-                        <div class="mb-4 sm:mb-0">
-                            <p class="text-sm text-gray-700">
-                                Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ page_obj.paginator.count }}</span> entries
-                            </p>
-                        </div>
-                        <div class="flex space-x-1">
+                    <div class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                        <p class="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
+                            Showing <span class="font-medium">{{ page_obj.start_index }}</span> to 
+                            <span class="font-medium">{{ page_obj.end_index }}</span> of 
+                            <span class="font-medium">{{ page_obj.paginator.count }}</span> entries
+                        </p>
+                        <div class="flex flex-wrap justify-center gap-1">
                             {% if page_obj.has_previous %}
-                                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <a href="?page={{ page_obj.previous_page_number }}" 
+                                   class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                     <i class="fas fa-chevron-left"></i>
                                 </a>
                             {% endif %}
                             
                             {% for num in page_obj.paginator.page_range %}
-                                {% if page_obj.number == num %}
-                                    <a href="?page={{ num }}" class="px-3 py-2 border border-indigo-500 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                {% if num == page_obj.number %}
+                                    <a href="?page={{ num }}" 
+                                       class="hidden sm:block px-3 py-2 border border-indigo-500 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                                         {{ num }}
                                     </a>
                                 {% else %}
-                                    <a href="?page={{ num }}" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <a href="?page={{ num }}" 
+                                       class="hidden sm:block px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                         {{ num }}
                                     </a>
                                 {% endif %}
                             {% endfor %}
                             
                             {% if page_obj.has_next %}
-                                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <a href="?page={{ page_obj.next_page_number }}" 
+                                   class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                     <i class="fas fa-chevron-right"></i>
                                 </a>
                             {% endif %}

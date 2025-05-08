@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-    <section class="py-10 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Manage Employee Roles</h2>
-                <div class="flex space-x-3">
-                    <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+    <section class="py-6 sm:py-10 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Manage Employee Roles</h2>
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <a href="{% url 'dashboard' %}" class="flex items-center justify-center text-indigo-600 hover:text-indigo-800 transition-all">
                         <i class="fas fa-arrow-left mr-2"></i>Dashboard
                     </a>
-                    <a href="{% url 'review_role_changes' %}" class="flex items-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm">
+                    <a href="{% url 'review_role_changes' %}" class="flex items-center justify-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm w-full sm:w-auto">
                         <i class="fas fa-clock mr-2"></i>Pending Changes
                     </a>
-                    <a href="{% url 'role_change_history' %}" class="flex items-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm">
+                    <a href="{% url 'role_change_history' %}" class="flex items-center justify-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-all shadow-sm w-full sm:w-auto">
                         <i class="fas fa-history mr-2"></i>Role History
                     </a>
                 </div>
@@ -29,9 +30,9 @@
             {% endif %}
 
             <!-- Filter Card -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
+            <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Filter Employees</h3>
-                <form method="get" class="grid md:grid-cols-4 gap-4">
+                <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                         <div class="relative">
@@ -77,35 +78,39 @@
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="bg-gray-50 border-b border-gray-200">
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Current Role</th>
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept Assign</th>
-                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Change Role</th>
+                                    <th class="px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+                                    <th class="px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="hidden sm:table-cell px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cross-Dept</th>
+                                    <th class="px-3 sm:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 {% for emp in page_obj %}
                                     <tr class="hover:bg-gray-50 transition-all">
-                                        <td class="px-6 py-4">
+                                        <td class="px-3 sm:px-6 py-4">
                                             <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold">
+                                                <div class="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-sm">
                                                     {{ emp.firstName|first }}{{ emp.lastName|first }}
                                                 </div>
-                                                <div class="ml-4">
+                                                <div class="ml-3 sm:ml-4">
                                                     <div class="text-sm font-medium text-gray-900">{{ emp.firstName }} {{ emp.lastName }}</div>
-                                                    <div class="text-sm text-gray-500">ID: {{ emp.eID }}</div>
+                                                    <div class="text-xs sm:text-sm text-gray-500">ID: {{ emp.eID }}</div>
+                                                    <!-- Mobile-only info -->
+                                                    <div class="sm:hidden text-xs text-gray-500 mt-1">
+                                                        <div>{{ emp.department.name|default:"N/A" }} - {{ emp.designation }}</div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4">
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                                 {{ emp.department.name|default:"N/A" }}
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-700">{{ emp.designation }}</td>
-                                        <td class="px-6 py-4">
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 text-sm text-gray-700">{{ emp.designation }}</td>
+                                        <td class="px-3 sm:px-6 py-4">
                                             {% if emp.role == 'admin' %}
                                                 <span class="px-3 py-1 text-xs rounded-full bg-purple-100 text-purple-800 font-medium">Admin</span>
                                             {% elif emp.role == 'manager' %}
@@ -116,7 +121,7 @@
                                                 <span class="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800 font-medium">{{ emp.role|title }}</span>
                                             {% endif %}
                                         </td>
-                                        <td class="px-6 py-4 text-center">
+                                        <td class="hidden sm:table-cell px-3 sm:px-6 py-4 text-center">
                                             {% if emp.role == 'employee' %}
                                                 <span class="text-gray-400" title="Cross-department assignment is not available for employees with the 'employee' role.">
                                                     <input type="checkbox" disabled class="h-4 w-4 text-gray-300 border-gray-300 rounded">
@@ -133,7 +138,7 @@
                                                 </form>
                                             {% endif %}
                                         </td>
-                                        <td class="px-6 py-4 text-right text-sm font-medium">
+                                        <td class="px-3 sm:px-6 py-4 text-right text-sm font-medium">
                                             <form method="post" onsubmit="return confirm('Are you sure you want to change the role of {{ emp.firstName }} {{ emp.lastName }} to ' + this.role.options[this.role.selectedIndex].text + '?');">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="employee_id" value="{{ emp.eID }}">
@@ -156,31 +161,31 @@
                     </div>
 
                     {% if page_obj.has_other_pages %}
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                            <div class="text-sm text-gray-700">
+                        <div class="px-3 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+                            <div class="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
                                 Showing <span class="font-medium">{{ page_obj.start_index }}</span> to 
                                 <span class="font-medium">{{ page_obj.end_index }}</span> of 
                                 <span class="font-medium">{{ page_obj.paginator.count }}</span> employees
                             </div>
-                            <div class="flex space-x-1">
+                            <div class="flex flex-wrap justify-center gap-1">
                                 {% if page_obj.has_previous %}
-                                    <a href="?page=1&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <a href="?page=1&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         <i class="fas fa-angle-double-left"></i>
                                     </a>
-                                    <a href="?page={{ page_obj.previous_page_number }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <a href="?page={{ page_obj.previous_page_number }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         <i class="fas fa-angle-left"></i>
                                     </a>
                                 {% endif %}
                                 
-                                <span class="px-3 py-1 bg-indigo-50 border border-indigo-300 rounded-md text-sm font-medium text-indigo-700">
+                                <span class="px-3 py-1 bg-indigo-50 border border-indigo-300 rounded-md text-xs sm:text-sm font-medium text-indigo-700">
                                     {{ page_obj.number }}
                                 </span>
                                 
                                 {% if page_obj.has_next %}
-                                    <a href="?page={{ page_obj.next_page_number }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <a href="?page={{ page_obj.next_page_number }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         <i class="fas fa-angle-right"></i>
                                     </a>
-                                    <a href="?page={{ page_obj.paginator.num_pages }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <a href="?page={{ page_obj.paginator.num_pages }}&name={{ name_filter }}&department={{ dept_filter }}&role={{ role_filter }}" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         <i class="fas fa-angle-double-right"></i>
                                     </a>
                                 {% endif %}

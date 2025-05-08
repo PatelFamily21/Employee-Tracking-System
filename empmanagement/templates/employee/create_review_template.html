@@ -1,63 +1,87 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="py-10 bg-gray-50">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">Create Performance Review Template</h2>
+<section class="py-6 sm:py-10 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Update header layout -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Create Performance Review Template</h2>
             <div class="flex space-x-3">
-                <a href="{% url 'manage_review_templates' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
+                <a href="{% url 'manage_review_templates' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all text-sm sm:text-base">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Templates
                 </a>
             </div>
         </div>
 
+        <!-- Update template builder section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="bg-indigo-600 text-white px-6 py-4">
-                <h2 class="text-xl font-semibold">Template Builder</h2>
+            <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                <h2 class="text-lg sm:text-xl font-semibold">Template Builder</h2>
             </div>
             
-            <div class="p-6">
-                <form method="post">
+            <div class="p-4 sm:p-6">
+                <form method="post" class="space-y-6">
                     {% csrf_token %}
                     
                     <!-- Template Details -->
-                    <div class="bg-gray-50 p-5 rounded-lg mb-6 border border-gray-200">
+                    <div class="bg-gray-50 p-4 sm:p-5 rounded-lg border border-gray-200">
                         <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Template Details</h3>
                         <div class="space-y-4">
-                            {{ template_form.as_p }}
+                            {% for field in template_form %}
+                                <div class="flex flex-col space-y-1">
+                                    <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                                        {{ field.label }}
+                                    </label>
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <p class="text-xs text-gray-500">{{ field.help_text }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
 
                     <!-- Questions Section -->
-                    <div class="mt-8">
+                    <div class="mt-6 sm:mt-8">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">Questions</h3>
                         {{ formset.management_form }}
                         <div id="question-forms" class="space-y-4">
                             {% for form in formset %}
-                            <div class="question-form bg-gray-50 p-5 rounded-lg border border-gray-200 relative">
-                                <button type="button" class="delete-question absolute top-4 right-4 text-red-600 hover:text-red-800 transition-all">
+                            <div class="question-form bg-gray-50 p-4 sm:p-5 rounded-lg border border-gray-200 relative">
+                                <button type="button" class="delete-question absolute top-2 right-2 sm:top-4 sm:right-4 text-red-600 hover:text-red-800 transition-all p-2">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
-                                <div class="space-y-4">
-                                    {{ form.as_p }}
+                                <div class="space-y-4 pr-8">
+                                    {% for field in form %}
+                                        <div class="flex flex-col space-y-1">
+                                            <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                                                {{ field.label }}
+                                            </label>
+                                            {{ field }}
+                                            {% if field.help_text %}
+                                                <p class="text-xs text-gray-500">{{ field.help_text }}</p>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                         
-                        <button type="button" id="add-question" class="mt-6 flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
-                            <i class="fas fa-plus mr-2"></i>Add Another Question
-                        </button>
-                    </div>
-
-                    <div class="flex mt-8">
-                        <button type="submit" class="flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
-                            <i class="fas fa-save mr-2"></i>Create Template
-                        </button>
-                        <a href="{% url 'manage_review_templates' %}" class="ml-4 flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                            Cancel
-                        </a>
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mt-6 sm:mt-8">
+                            <button type="button" id="add-question" class="w-full sm:w-auto flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                                <i class="fas fa-plus mr-2"></i>Add Another Question
+                            </button>
+                            
+                            <button type="submit" class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                                <i class="fas fa-save mr-2"></i>Create Template
+                            </button>
+                            
+                            <a href="{% url 'manage_review_templates' %}" class="w-full sm:w-auto flex items-center justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                Cancel
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -84,7 +108,7 @@ document.getElementById('add-question').addEventListener('click', function() {
             input.id = input.id.replace(/form-\d+/, `form-${formIndex}`);
         }
         // Clear the input values
-        input.value = input.type === 'number' ? '0' : '';
+        input.value = '';
     });
 
     formContainer.appendChild(firstForm);
@@ -99,7 +123,12 @@ function attachDeleteListeners() {
     const deleteButtons = document.querySelectorAll('.delete-question');
     deleteButtons.forEach(button => {
         button.removeEventListener('click', handleDelete); // Remove existing listeners to avoid duplicates
+        button.removeEventListener('touchend', handleDelete); // Remove touch listeners to avoid duplicates
         button.addEventListener('click', handleDelete);
+        button.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            handleDelete(e);
+        });
     });
 }
 
@@ -130,7 +159,34 @@ function handleDelete(event) {
     }
 }
 
-// Attach delete listeners on page load
-document.addEventListener('DOMContentLoaded', attachDeleteListeners);
+// Add touch event handling for mobile
+function addTouchSupport() {
+    const deleteButtons = document.querySelectorAll('.delete-question');
+    deleteButtons.forEach(button => {
+        button.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            handleDelete(e);
+        });
+    });
+}
+
+// Add resize handler for mobile
+window.addEventListener('resize', function() {
+    const questionForms = document.querySelectorAll('.question-form');
+    questionForms.forEach(form => {
+        const deleteButton = form.querySelector('.delete-question');
+        if (window.innerWidth < 640) { // Mobile breakpoint
+            deleteButton.classList.add('touch-target');
+        } else {
+            deleteButton.classList.remove('touch-target');
+        }
+    });
+});
+
+// Initialize mobile support
+document.addEventListener('DOMContentLoaded', function() {
+    attachDeleteListeners();
+    addTouchSupport();
+});
 </script>
 {% endblock %}

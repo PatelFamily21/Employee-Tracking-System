@@ -7,6 +7,7 @@ from django.core.validators import RegexValidator, FileExtensionValidator
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Max
+from django.core.validators import MaxValueValidator
 
 # Existing choices (unchanged)
 designations_opt = (
@@ -98,7 +99,7 @@ class Employee(models.Model):
     addharNo = models.CharField(max_length=20, unique=True)
     dOB = models.DateField()
     designation = models.CharField(max_length=50, choices=designations_opt)
-    salary = models.CharField(max_length=20)
+    salary = models.PositiveIntegerField(validators=[MaxValueValidator(999999)])
     joinDate = models.DateField()
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="employees")
     role = models.CharField(max_length=20, choices=role_choices, default='employee')
@@ -214,10 +215,7 @@ class Attendance(models.Model):
     ], default='present')  # Attendance status
     check_in_time = models.DateTimeField(null=True, blank=True)  # Check-in time
     check_out_time = models.DateTimeField(null=True, blank=True)  # Check-out time
-    check_in_latitude = models.FloatField(null=True, blank=True)  # Latitude at check-in
-    check_in_longitude = models.FloatField(null=True, blank=True)  # Longitude at check-in
-    check_out_latitude = models.FloatField(null=True, blank=True)  # Latitude at check-out
-    check_out_longitude = models.FloatField(null=True, blank=True)  # Longitude at check-out
+    
 
     class Meta:
         unique_together = ('eId', 'date')  # Ensure one record per employee per day
@@ -426,8 +424,6 @@ class PendingRoleChange(models.Model):
         return f"{self.employee.eID}: {self.old_role} -> {self.new_role} ({self.status})"
     
 
-# employee/models.py
-# employee/models.py
 class AuditLog(models.Model):
     ACTION_TYPES = [
         ('create', 'Create'),
@@ -457,6 +453,9 @@ class PerformanceReviewTemplate(models.Model):
     def __str__(self):
         return self.name
 
+from django.db import models
+from .models import PerformanceReviewTemplate
+
 class ReviewQuestion(models.Model):
     template = models.ForeignKey(PerformanceReviewTemplate, on_delete=models.CASCADE, related_name='questions')
     question_text = models.CharField(max_length=255)
@@ -464,10 +463,6 @@ class ReviewQuestion(models.Model):
         ('rating', 'Rating (1-5)'),
         ('text', 'Text Response'),
     ])
-    order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ['order']
 
     def __str__(self):
         return f"{self.question_text} ({self.template.name})"
@@ -534,4 +529,16 @@ class IssueReport(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.reporter.firstName} ({self.get_category_display()})"
+
+from django.db import models
+from django.utils import timezone
+
+class IssueComment(models.Model):
+    issue = models.ForeignKey('IssueReport', on_delete=models.CASCADE, related_name='comments')
+    commenter = models.ForeignKey('Employee', on_delete=models.CASCADE)
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.commenter.eID} on Issue {self.issue.id}"
     

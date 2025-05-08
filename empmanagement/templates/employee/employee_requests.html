@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <section class="py-10 bg-gray-50">
+    <section class="py-6 sm:py-10 bg-gray-50">
         <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800">Employee Requests</h2>
-                <div class="flex space-x-3">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Employee Requests</h2>
+                <div class="w-full sm:w-auto">
                     <a href="{% url 'dashboard' %}" class="flex items-center text-indigo-600 hover:text-indigo-800 transition-all">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>
@@ -25,78 +26,83 @@
             {% endif %}
             
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="bg-indigo-600 text-white px-6 py-4">
-                    <h2 class="text-xl font-semibold">Leave Requests</h2>
+                <div class="bg-indigo-600 text-white px-4 sm:px-6 py-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Leave Requests</h2>
                 </div>
                 
-                <div class="p-6">
-                    <div class="overflow-x-auto">
+                <div class="p-4 sm:p-6">
+                    <div class="overflow-x-auto -mx-4 sm:mx-0">
                         <table class="min-w-full">
                             <thead>
                                 <tr class="bg-gray-50 border-b">
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Request ID</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Employee</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Start Date</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">End Date</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Reason</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Request Date</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Compulsory</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Status</th>
-                                    <th class="text-sm font-medium text-gray-700 px-6 py-4 text-left">Actions</th>
+                                    <th class="text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">ID</th>
+                                    <th class="text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Employee</th>
+                                    <th class="hidden sm:table-cell text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Start</th>
+                                    <th class="hidden sm:table-cell text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">End</th>
+                                    <th class="hidden sm:table-cell text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Reason</th>
+                                    <th class="hidden sm:table-cell text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Request Date</th>
+                                    <th class="hidden sm:table-cell text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Compulsory</th>
+                                    <th class="text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Status</th>
+                                    <th class="text-xs sm:text-sm font-medium text-gray-700 px-3 sm:px-6 py-4 text-left">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for request in page_obj %}
                                     <tr class="border-b transition duration-300 ease-in-out hover:bg-gray-50">
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.Id }}
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4">
                                             {{ request.requester.firstName }} {{ request.requester.lastName }}
+                                            <!-- Mobile-only info -->
+                                            <div class="sm:hidden text-xs text-gray-500 mt-1">
+                                                <div>{{ request.start_date|date:"Y-m-d" }} to {{ request.end_date|date:"Y-m-d" }}</div>
+                                                <div class="mt-1">{{ request.request_message }}</div>
+                                            </div>
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="hidden sm:table-cell text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.start_date|date:"Y-m-d" }}
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="hidden sm:table-cell text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.end_date|date:"Y-m-d" }}
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="hidden sm:table-cell text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.request_message }}
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="hidden sm:table-cell text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.request_date|date:"Y-m-d H:i" }}
                                         </td>
-                                        <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                                        <td class="hidden sm:table-cell text-xs sm:text-sm text-gray-900 font-light px-3 sm:px-6 py-4 whitespace-nowrap">
                                             {{ request.is_compulsory|yesno:"Yes,No" }}
                                         </td>
-                                        <td class="text-sm font-medium px-6 py-4 whitespace-nowrap">
-                                            <span class="inline-flex px-3 py-1 text-xs rounded-full {% if request.status == 'pending' %}bg-yellow-100 text-yellow-800{% elif request.status == 'approved' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        <td class="text-xs sm:text-sm font-medium px-3 sm:px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex px-2 sm:px-3 py-1 text-xs rounded-full {% if request.status == 'pending' %}bg-yellow-100 text-yellow-800{% elif request.status == 'approved' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
                                                 {{ request.status|capfirst }}
                                             </span>
                                         </td>
-                                        <td class="text-sm font-medium px-6 py-4 whitespace-nowrap">
+                                        <td class="text-xs sm:text-sm font-medium px-3 sm:px-6 py-4">
                                             {% if request.status == 'pending' %}
-                                                <div class="flex space-x-2">
+                                                <div class="flex flex-col sm:flex-row gap-2">
                                                     <form method="post" class="inline">
                                                         {% csrf_token %}
                                                         <input type="hidden" name="request_id" value="{{ request.Id }}">
-                                                        <button type="submit" name="action" value="approve" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
+                                                        <button type="submit" name="action" value="approve" class="w-full sm:w-auto flex items-center justify-center py-1 px-2 sm:px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
                                                             <i class="fas fa-check mr-1"></i>Approve
                                                         </button>
                                                     </form>
                                                     <form method="post" class="inline">
                                                         {% csrf_token %}
                                                         <input type="hidden" name="request_id" value="{{ request.Id }}">
-                                                        <button type="submit" name="action" value="reject" class="flex items-center justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
+                                                        <button type="submit" name="action" value="reject" class="w-full sm:w-auto flex items-center justify-center py-1 px-2 sm:px-3 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">
                                                             <i class="fas fa-times mr-1"></i>Reject
                                                         </button>
                                                     </form>
-                                                    <a href="{% url 'leave_request_details' rid=request.Id %}" class="flex items-center justify-center py-1 px-3 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                                    <a href="{% url 'leave_request_details' rid=request.Id %}" class="w-full sm:w-auto flex items-center justify-center py-1 px-2 sm:px-3 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                                         <i class="fas fa-eye mr-1"></i>View
                                                     </a>
                                                 </div>
                                             {% else %}
-                                                <a href="{% url 'leave_request_details' rid=request.Id %}" class="flex items-center justify-center py-1 px-3 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                                <a href="{% url 'leave_request_details' rid=request.Id %}" class="w-full sm:w-auto flex items-center justify-center py-1 px-2 sm:px-3 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                                     <i class="fas fa-eye mr-1"></i>View
                                                 </a>
                                             {% endif %}
@@ -118,20 +124,20 @@
 
                     <!-- Pagination Controls -->
                     {% if page_obj.has_other_pages %}
-                        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center">
-                            <div class="mb-4 sm:mb-0">
-                                <p class="text-sm text-gray-700">
+                        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                            <div class="w-full sm:w-auto text-center sm:text-left">
+                                <p class="text-xs sm:text-sm text-gray-700">
                                     Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
                                 </p>
                             </div>
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2 w-full sm:w-auto justify-center sm:justify-start">
                                 {% if page_obj.has_previous %}
-                                    <a href="?page={{ page_obj.previous_page_number }}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                    <a href="?page={{ page_obj.previous_page_number }}" class="flex-1 sm:flex-none flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                         <i class="fas fa-chevron-left mr-2"></i>Previous
                                     </a>
                                 {% endif %}
                                 {% if page_obj.has_next %}
-                                    <a href="?page={{ page_obj.next_page_number }}" class="flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                    <a href="?page={{ page_obj.next_page_number }}" class="flex-1 sm:flex-none flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
                                         Next<i class="fas fa-chevron-right ml-2"></i>
                                     </a>
                                 {% endif %}

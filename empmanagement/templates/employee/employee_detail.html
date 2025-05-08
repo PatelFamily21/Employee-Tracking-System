@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Employee Details: {{ employee.eID }}</h1>
-        <div class="flex space-x-3">
-            <a href="{% url 'employee_database' %}" class="text-blue-600 hover:text-blue-800 flex items-center">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Employee Database
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Employee Details: {{ employee.eID }}</h1>
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+            <a href="{% url 'employee_database' %}" class="text-blue-600 hover:text-blue-800 flex items-center justify-center sm:justify-start w-full sm:w-auto">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Database
             </a>
-            <a href="{% url 'export_employee_detail' eID=employee.eID %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all flex items-center">
+            <a href="{% url 'export_employee_detail' eID=employee.eID %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all flex items-center justify-center sm:justify-start w-full sm:w-auto">
                 <i class="fas fa-download mr-2"></i> Export Profile
             </a>
         </div>
@@ -28,9 +28,9 @@
     {% endif %}
 
     <!-- Employee Info -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8 overflow-x-auto">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Personal Information</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base">
             <div><strong>EID:</strong> {{ employee.eID }}</div>
             <div><strong>Name:</strong> {{ employee.firstName }} {{ employee.middleName }} {{ employee.lastName }}</div>
             <div><strong>Email:</strong> {{ employee.email }}</div>
@@ -51,29 +51,29 @@
     </div>
 
     <!-- Emergency Contacts -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Emergency Contacts</h2>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr class="bg-gray-50">
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Name</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Relationship</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Phone</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Email</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Name</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left hidden sm:table-cell">Relationship</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Phone</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left hidden sm:table-cell">Email</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for contact in employee.emergency_contacts.all %}
                         <tr class="hover:bg-gray-50 transition-all">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.relationship }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.phone_no }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.email|default:"—" }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.name }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 hidden sm:table-cell">{{ contact.relationship }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contact.phone_no }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 hidden sm:table-cell">{{ contact.email|default:"—" }}</td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="4" class="px-3 sm:px-6 py-12 text-center text-gray-500">
                                 No emergency contacts found.
                             </td>
                         </tr>
@@ -84,29 +84,29 @@
     </div>
 
     <!-- Role Change History -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Role Change History</h2>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr class="bg-gray-50">
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Old Role</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">New Role</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Changed By</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Changed At</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Old Role</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">New Role</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Changed By</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Changed At</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for log in role_history %}
                         <tr class="hover:bg-gray-50 transition-all">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.old_role|title }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.new_role|title }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_by.firstName }} {{ log.changed_by.lastName }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.old_role|title }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.new_role|title }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_by.firstName }} {{ log.changed_by.lastName }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.changed_at|date:"Y-m-d H:i" }}</td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="4" class="px-3 sm:px-6 py-12 text-center text-gray-500">
                                 No role change history found.
                             </td>
                         </tr>
@@ -117,33 +117,33 @@
     </div>
 
     <!-- Documents (Read-Only for HR) -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Documents</h2>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr class="bg-gray-50">
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Title</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Type</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Uploaded At</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Sensitive</th>
-                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">Actions</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Title</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Type</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Uploaded At</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Sensitive</th>
+                        <th class="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 sm:px-6 py-3 text-left">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for doc in employee.documents.all %}
                         <tr class="hover:bg-gray-50 transition-all">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.title }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.get_document_type_display }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.title }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.get_document_type_display }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {% if doc.is_sensitive %}
                                     <span class="text-red-600">Yes</span>
                                 {% else %}
                                     <span class="text-green-600">No</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {% if not doc.is_sensitive %}
                                     <a href="{{ doc.file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                         <i class="fas fa-download mr-1"></i>Download
@@ -155,7 +155,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="5" class="px-3 sm:px-6 py-12 text-center text-gray-500">
                                 No documents found.
                             </td>
                         </tr>

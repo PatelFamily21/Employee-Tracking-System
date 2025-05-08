@@ -54,4 +54,6 @@ urlpatterns = [
     path('my-issue-reports/', views.my_issue_reports, name='my_issue_reports'),
     path('manage-issue-reports/', views.manage_issue_reports, name='manage_issue_reports'),
     path('issue-detail/<int:id>/', views.issue_detail, name='issue_detail'),
+    #path('get-employees-by-department/', views.get_employees_by_department, name='get_employees_by_department'),
+    path('my-issue-detail/<int:id>/', views.my_issue_detail, name='my_issue_detail'),
 ]

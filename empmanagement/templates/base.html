@@ -4,7 +4,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" width="device-width, initial-scale=1.0">
     <title>Employee Management System</title>
     <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}">
     <!-- Tailwind CSS -->
@@ -29,6 +29,7 @@
             left: 0;
             bottom: 0;
             width: 256px; /* Default width */
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .sidebar-item {
@@ -36,15 +37,24 @@
             align-items: center;
             border-radius: 0.5rem;
             transition: all 0.2s ease;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .sidebar-item:hover {
             background-color: rgba(79, 70, 229, 0.1);
         }
         
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(79, 70, 229, 0.05);
+            transform: translateX(4px);
+        }
+        
         .sidebar-item.active {
-            background-color: rgba(79, 70, 229, 0.2);
+            background-color: rgba(79, 70, 229, 0.1);
             color: #4f46e5;
+            font-weight: 500;
+            transform: translateX(4px);
         }
         
         .sidebar-item i {
@@ -76,11 +86,12 @@
         
         /* Main content area */
         .main-content {
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 100vh;
             overflow-x: hidden;
             margin-left: 256px; /* Default margin to account for sidebar */
             padding: 1.5rem; /* Consistent padding */
+            background-color: #f9fafb;
         }
         
         /* Tooltip for collapsed sidebar */
@@ -127,35 +138,84 @@
         @media (max-width: 768px) {
             #sidebar {
                 transform: translateX(-100%);
+                position: fixed;
+                width: 240px !important;
+                height: 100vh;
+                z-index: 50;
+                transition: transform 0.3s ease-in-out;
             }
             
             #sidebar.open {
                 transform: translateX(0);
             }
             
+            .main-content {
+                margin-left: 0 !important;
+                padding: 1rem;
+                width: 100%;
+            }
+            
+            #mobile-toggle {
+                display: block !important;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 60;
+                background: white;
+                border-radius: 50%;
+                padding: 0.5rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
             #mobile-overlay {
-                visibility: hidden;
-                opacity: 0;
-                transition: opacity 0.3s ease, visibility 0.3s ease;
+                display: none;
+                position: fixed;
+                inset: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 40;
             }
             
             #mobile-overlay.active {
-                visibility: visible;
-                opacity: 1;
+                display: block;
             }
             
-            .main-content {
-                margin-left: 0 !important;
+            /* Adjust grid layout for mobile */
+            .grid {
+                grid-template-columns: repeat(1, 1fr) !important;
             }
             
-            /* Mobile toggle button */
-            #mobile-toggle {
-                display: flex;
+            /* Adjust font sizes for mobile */
+            .text-3xl {
+                font-size: 1.5rem !important;
+            }
+            
+            .text-xl {
+                font-size: 1.25rem !important;
+            }
+        }
+
+        /* Add these new utility classes */
+        .hide-on-mobile {
+            @media (max-width: 768px) {
+                display: none !important;
+            }
+        }
+
+        .show-on-mobile {
+            @media (min-width: 769px) {
+                display: none !important;
             }
         }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Add this right after <body> tag -->
+    <div id="mobile-toggle" class="show-on-mobile cursor-pointer">
+        <i class="fas fa-bars text-gray-700 text-xl"></i>
+    </div>
+
+    <div id="mobile-overlay"></div>
+
     <!-- Mobile Menu Toggle -->
     <div id="mobile-toggle" class="fixed top-4 left-4 z-50 md:hidden bg-white rounded-full shadow-md p-2 cursor-pointer">
         <i class="fas fa-bars text-gray-700"></i>
@@ -172,8 +232,8 @@
                 <div class="flex items-center">
                     <div class="text-indigo-600 font-bold text-lg sidebar-logo">EmpTrack</div>
                 </div>
-                <div id="sidebar-toggle" class="cursor-pointer hover:bg-gray-100 p-2 rounded-full">
-                    <i class="fas fa-chevron-left text-gray-500"></i>
+                <div id="sidebar-toggle" class="cursor-pointer hover:bg-indigo-50 p-2 rounded-full transition-all duration-300">
+                    <i class="fas fa-chevron-left text-indigo-600 transition-transform duration-300"></i>
                 </div>
             </div>
 
@@ -216,25 +276,34 @@
                     <a href="{% url 'makeRequest' %}" class="text-sm truncate sidebar-text">Requests</a>
                     <span class="sidebar-tooltip">Requests</span>
                 </div>
-                <!-- New General Items: Issue Reporting -->
-                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/report-issue' %}active{% endif %}">
-                    <i class="fas fa-exclamation-circle mr-3 text-gray-500"></i>
-                    <a href="{% url 'report_issue' %}" class="text-sm truncate sidebar-text">Report a Problem</a>
-                    <span class="sidebar-tooltip">Report a Problem</span>
-                </div>
-                <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/my-issue-reports' %}active{% endif %}">
-                    <i class="fas fa-file-alt mr-3 text-gray-500"></i>
-                    <a href="{% url 'my_issue_reports' %}" class="text-sm truncate sidebar-text">My Issue Reports</a>
-                    <span class="sidebar-tooltip">My Issue Reports</span>
-                </div>
+            
+                <!-- Issue Reporting Items (Employee, Manager) -->
+                {% if employee.role == 'employee' or employee.role == 'manager' %}
+                    <div class="my-4 border-t border-gray-200"></div>
+                    <div class="mt-4 mb-2 px-3">
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Issue Reporting</div>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/report-issue' %}active{% endif %}">
+                        <i class="fas fa-exclamation-circle mr-3 text-gray-500"></i>
+                        <a href="{% url 'report_issue' %}" class="text-sm truncate sidebar-text">Report a Problem</a>
+                        <span class="sidebar-tooltip">Report a Problem</span>
+                    </div>
+                    <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/my-issue-reports' %}active{% endif %}">
+                        <i class="fas fa-file-alt mr-3 text-gray-500"></i>
+                        <a href="{% url 'my_issue_reports' %}" class="text-sm truncate sidebar-text">My Issue Reports</a>
+                        <span class="sidebar-tooltip">My Issue Reports</span>
+                    </div>
+                {% endif %}
+            
                 <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/view-performance-reviews' %}active{% endif %}">
                     <i class="fas fa-star mr-3 text-gray-500"></i>
                     <a href="{% url 'view_performance_reviews' %}" class="text-sm truncate sidebar-text">Performance Reviews</a>
                     <span class="sidebar-tooltip">Performance Reviews</span>
                 </div>
-                
-                <!-- Manager/Admin Items -->
-                {% if employee.role == 'manager' or employee.role == 'admin' or employee.role == 'hr' %}
+            
+                <!-- Manager/HR Items -->
+                {% if employee.role == 'manager' or employee.role == 'hr' %}
+                    <div class="my-4 border-t border-gray-200"></div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/assignwork' %}active{% endif %}">
                         <i class="fas fa-briefcase mr-3 text-gray-500"></i>
                         <a href="{% url 'assignwork' %}" class="text-sm truncate sidebar-text">Assign Work</a>
@@ -263,16 +332,16 @@
                         {% endif %}
                         <span class="sidebar-tooltip">Managerial Requests</span>
                     </div>
-                    <!-- New Manager/Admin Item: Manage Issue Reports -->
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/manage-issue-reports' %}active{% endif %}">
                         <i class="fas fa-tools mr-3 text-gray-500"></i>
                         <a href="{% url 'manage_issue_reports' %}" class="text-sm truncate sidebar-text">Manage Issue Reports</a>
                         <span class="sidebar-tooltip">Manage Issue Reports</span>
                     </div>
                 {% endif %}
-
-                <!-- HR/Admin Items -->
-                {% if employee.role == 'hr' or employee.role == 'admin' %}
+            
+                <!-- HR Items -->
+                {% if employee.role == 'hr' %}
+                    <div class="my-4 border-t border-gray-200"></div>
                     <div class="mt-4 mb-2 px-3">
                         <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">HR Controls</div>
                     </div>
@@ -324,8 +393,8 @@
                     </div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/employee-requests' %}active{% endif %}">
                         <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
-                        <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Requests</a>
-                        <span class="sidebar-tooltip">Employee Requests</span>
+                        <a href="{% url 'employee_requests' %}" class="text-sm truncate sidebar-text">Employee Leave Requests</a>
+                        <span class="sidebar-tooltip">Employee Leave Requests</span>
                     </div>
                     <div class="sidebar-item p-3 cursor-pointer {% if request.path == '/ems/issue-compulsory-leave' %}active{% endif %}">
                         <i class="fas fa-calendar-check mr-3 text-gray-500"></i>
@@ -348,9 +417,10 @@
                         <span class="sidebar-tooltip">Schedule Performance Review</span>
                     </div>
                 {% endif %}
-
+            
                 <!-- Admin-Only Items -->
                 {% if employee.role == 'admin' %}
+                    <div class="my-4 border-t border-gray-200"></div>
                     <div class="mt-4 mb-2 px-3">
                         <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Controls</div>
                     </div>
@@ -370,9 +440,10 @@
                         <span class="sidebar-tooltip">Audit Logs</span>
                     </div>
                 {% endif %}
-
+            
                 <!-- Employee Tools (Non-Admin/HR Roles) -->
                 {% if employee.role == 'employee' or employee.role == 'manager' %}
+                    <div class="my-4 border-t border-gray-200"></div>
                     <div class="mt-4 mb-2 px-3">
                         <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee Tools</div>
                     </div>
@@ -400,46 +471,13 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="flex-grow main-content">
+        <div class="flex-grow main-content p-4 md:p-6">
             <div class="max-w-6xl mx-auto">
                 {% block content %}
-                    <!-- Default content (can be overridden by child templates) -->
-                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Employee Dashboard</h1>
-                    <!-- Quick Stats Grid -->
-                    <div class="grid md:grid-cols-4 gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md">
-                            <h3 class="text-lg font-semibold mb-4">Total Employees</h3>
-                            <p class="text-3xl font-bold text-indigo-600">{{ total_employees|default:"0" }}</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md">
-                            <h3 class="text-lg font-semibold mb-4">Pending Requests</h3>
-                            <p class="text-3xl font-bold text-yellow-600">{{ pending_requests|default:"0" }}</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md">
-                            <h3 class="text-lg font-semibold mb-4">Recent Notices</h3>
-                            <p class="text-3xl font-bold text-green-600">{{ recent_notices|length|default:"0" }}</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md">
-                            <h3 class="text-lg font-semibold mb-4">Departments</h3>
-                            <p class="text-3xl font-bold text-purple-600">{{ departments|default:"0" }}</p>
-                        </div>
-                    </div>
-                    <!-- Recent Activity -->
-                    <div class="mt-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
-                        <div class="space-y-4">
-                            {% for notice in recent_notices %}
-                                <div class="border-b pb-3">
-                                    <p class="font-medium">{{ notice.title }}</p>
-                                    <span class="text-sm text-gray-500">{{ notice.publishDate|date:"Y-m-d" }}</span>
-                                </div>
-                            {% empty %}
-                                <div>
-                                    <p class="font-medium">No recent activity.</p>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+                <!-- Your existing content -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+                    <!-- Your existing grid items -->
+                </div>
                 {% endblock %}
             </div>
         </div>
@@ -455,60 +493,62 @@
                 const mainContent = document.querySelector('.main-content');
                 const mobileToggle = document.getElementById('mobile-toggle');
                 const mobileOverlay = document.getElementById('mobile-overlay');
-                const sidebarTooltips = document.querySelectorAll('.sidebar-tooltip');
-                const sidebarLogo = document.querySelector('.sidebar-logo');
                 const sidebarText = document.querySelectorAll('.sidebar-text');
+                const sidebarLogo = document.querySelector('.sidebar-logo');
                 const toggleIcon = sidebarToggle.querySelector('i');
-                
-                // Helper functions
-                function setupTooltips() {
-                    sidebar.forEach((item, index) => {
-                        const tooltip = item.querySelector('.sidebar-tooltip');
-                        if (tooltip) {
-                            item.addEventListener('mouseenter', () => {
-                                if (sidebar.classList.contains('collapsed')) {
-                                    tooltip.style.opacity = '1';
-                                }
-                            });
-                            
-                            item.addEventListener('mouseleave', () => {
-                                tooltip.style.opacity = '0';
-                            });
-                        }
+
+                // Set up tooltip behavior
+                sidebarItems.forEach(item => {
+                    const tooltip = item.querySelector('.sidebar-tooltip');
+                    if (tooltip) {
+                        item.addEventListener('mouseenter', () => {
+                            if (sidebar.classList.contains('collapsed')) {
+                                tooltip.style.opacity = '1';
+                            }
+                        });
+                        
+                        item.addEventListener('mouseleave', () => {
+                            tooltip.style.opacity = '0';
+                        });
+                    }
+                });
+
+                function expandSidebar() {
+                    requestAnimationFrame(() => {
+                        sidebar.style.width = '256px';
+                        sidebar.classList.remove('collapsed');
+                        mainContent.style.marginLeft = '256px';
+                        sidebarText.forEach(text => {
+                            text.classList.remove('hidden');
+                            requestAnimationFrame(() => text.style.opacity = '1');
+                        });
+                        sidebarLogo.classList.remove('hidden');
+                        toggleIcon.style.transform = 'rotate(0deg)';
+                        localStorage.setItem('sidebarState', 'expanded');
                     });
                 }
-                
-                function expandSidebar() {
-                    sidebar.style.width = '256px';
-                    sidebar.classList.remove('collapsed');
-                    mainContent.style.marginLeft = '256px';
-                    sidebarText.forEach(text => text.classList.remove('hidden'));
-                    sidebarLogo.classList.remove('hidden');
-                    toggleIcon.classList.remove('fa-chevron-right');
-                    toggleIcon.classList.add('fa-chevron-left');
-                    localStorage.setItem('sidebarState', 'expanded');
-                }
-                
+
                 function collapseSidebar() {
-                    sidebar.style.width = '5rem';
-                    sidebar.classList.add('collapsed');
-                    mainContent.style.marginLeft = '5rem';
-                    sidebarText.forEach(text => text.classList.add('hidden'));
-                    sidebarLogo.classList.add('hidden');
-                    toggleIcon.classList.remove('fa-chevron-left');
-                    toggleIcon.classList.add('fa-chevron-right');
-                    localStorage.setItem('sidebarState', 'collapsed');
+                    requestAnimationFrame(() => {
+                        sidebar.style.width = '5rem';
+                        sidebar.classList.add('collapsed');
+                        mainContent.style.marginLeft = '5rem';
+                        sidebarText.forEach(text => {
+                            text.style.opacity = '0';
+                            setTimeout(() => text.classList.add('hidden'), 300);
+                        });
+                        sidebarLogo.classList.add('hidden');
+                        toggleIcon.style.transform = 'rotate(180deg)';
+                        localStorage.setItem('sidebarState', 'collapsed');
+                    });
                 }
-                
+
                 // Load saved state
                 const savedState = localStorage.getItem('sidebarState');
                 if (savedState === 'collapsed') {
                     collapseSidebar();
                 }
-                
-                // Setup tooltips regardless of initial state
-                setupTooltips();
-                
+
                 // Sidebar toggle functionality
                 sidebarToggle.addEventListener('click', () => {
                     if (sidebar.classList.contains('collapsed')) {
@@ -517,29 +557,30 @@
                         collapseSidebar();
                     }
                 });
-                
+
                 // Mobile toggle
                 mobileToggle.addEventListener('click', () => {
                     sidebar.classList.toggle('open');
                     mobileOverlay.classList.toggle('active');
                 });
-                
+
                 // Close sidebar when clicking overlay
                 mobileOverlay.addEventListener('click', () => {
                     sidebar.classList.remove('open');
                     mobileOverlay.classList.remove('active');
                 });
-                
+
                 // Handle window resize
                 function handleResize() {
-                    if (window.innerWidth < 768) { // Fixed: removed 'px'
-                        if (sidebar.classList.contains('open')) {
-                            // Keep it open if user has opened it
-                        } else {
-                            sidebar.classList.remove('open');
-                            mobileOverlay.classList.remove('active');
-                        }
+                    const sidebar = document.getElementById('sidebar');
+                    const mobileOverlay = document.getElementById('mobile-overlay');
+                    const mainContent = document.querySelector('.main-content');
+                    
+                    if (window.innerWidth < 768) {
                         mainContent.style.marginLeft = '0';
+                        sidebar.classList.remove('open');
+                        mobileOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
                     } else {
                         if (sidebar.classList.contains('collapsed')) {
                             mainContent.style.marginLeft = '5rem';
@@ -548,25 +589,57 @@
                         }
                     }
                 }
-                
+
                 window.addEventListener('resize', handleResize);
                 handleResize(); // Initial call
-                
-                // Make sidebar items clickable (entire row)
+
+                // Make sidebar items clickable
                 sidebarItems.forEach(item => {
                     item.addEventListener('click', function(e) {
-                        // Only navigate if click was not on the actual link
                         if (e.target.tagName !== 'A') {
                             const link = this.querySelector('a');
                             if (link) link.click();
                         }
                         
-                        // Close mobile sidebar after click
                         if (window.innerWidth < 768) {
                             sidebar.classList.remove('open');
                             mobileOverlay.classList.remove('active');
                         }
                     });
+                });
+
+                // Initialize mobile functionality
+                handleMobileView();
+            }
+
+            // Add/update these functions in your existing script section
+            function handleMobileView() {
+                const sidebar = document.getElementById('sidebar');
+                const mobileToggle = document.getElementById('mobile-toggle');
+                const mobileOverlay = document.getElementById('mobile-overlay');
+                
+                // Toggle sidebar on mobile
+                mobileToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('open');
+                    mobileOverlay.classList.toggle('active');
+                    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+                });
+                
+                // Close sidebar when clicking overlay
+                mobileOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                });
+                
+                // Close sidebar when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!sidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                        sidebar.classList.remove('open');
+                        mobileOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
                 });
             }
 
